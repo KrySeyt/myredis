@@ -1,5 +1,8 @@
 import socket
 from concurrent.futures import ThreadPoolExecutor
+from typing import Any
+
+storage: dict[str, Any] = dict()
 
 
 def commands_handler(conn: socket.socket) -> None:
@@ -8,8 +11,14 @@ def commands_handler(conn: socket.socket) -> None:
             case ["PING"]:
                 conn.send(ping())
 
-            case ["ECHO", value]:
+            case ["ECHO", str(value)]:
                 conn.send(echo(value))
+
+            case ["SET", str(key), str(value)]:
+                conn.send(set_(key, value))
+
+            case ["GET", str(key)]:
+                conn.send(get(key))
 
 
 def parse_redis_command(serialized_command: bytes) -> list[str]:
@@ -22,6 +31,20 @@ def parse_redis_command(serialized_command: bytes) -> list[str]:
 
 def ping() -> bytes:
     return "+PONG\r\n".encode("utf-8")
+
+
+def set_(key: str, value: str) -> bytes:
+    storage[key] = value
+    return "+OK\r\n".encode("utf-8")
+
+
+def get(key: str) -> bytes:
+    value = storage.get(key)
+
+    if value is None:
+        return "$-1\r\n".encode("utf-8")
+
+    return f"+{value}\r\n".encode("utf-8")
 
 
 def echo(value: str) -> bytes:
