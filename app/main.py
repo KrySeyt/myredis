@@ -29,11 +29,17 @@ storage: dict[str, Any] = dict()
 
 
 def commands_handler(conn: socket.socket) -> None:
-    while command := conn.recv(1024):
-        parsed_command = parse_redis_command(command)
+    while True:
+        data = conn.recv(1024)
+
+        if not data:
+            continue
+
+        parsed_command = parse_redis_command(data)
+        print(f"{role}: Received command - {parsed_command}")
         match parsed_command:
             case ["PING"]:
-                conn.send(ping())
+                conn.sendall(ping())
 
             case ["ECHO", str(value)]:
                 conn.send(echo(value))
@@ -51,14 +57,13 @@ def commands_handler(conn: socket.socket) -> None:
                 conn.send(info())
 
             case _:
-                print(parsed_command)
+                print(f"{role}: Unknown command - {parsed_command}")
 
 
 def parse_redis_command(serialized_command: bytes) -> list[Any]:
     decoded_command = serialized_command.decode("utf-8")
     commands: list[Any] = decoded_command.strip().split("\r\n")
     commands = [command for command in commands if command[0] not in ("*", "$")]
-
     for i, cmd in enumerate(commands):
         if cmd.upper() in COMMANDS:
             commands[i] = cmd.upper()
@@ -118,14 +123,20 @@ def main() -> None:
     arg_parser.add_argument("--replicaof", nargs=2, type=str)
     args = arg_parser.parse_args()
 
-    match arg_parser.parse_args():
-        case Namespace(replicaof=[str(), str()]):
-            role = Role.SLAVE
-            start_server("localhost", args.port)
+    if args.replicaof is not None:
+        role = Role.SLAVE
 
-        case _:
-            role = Role.MASTER
-            start_server("localhost", args.port)
+        master_domain, master_port = args.replicaof
+        master_port = int(master_port)
+        master_conn = socket.create_connection((master_domain, master_port))
+        master_conn.sendall("*1\r\n$4\r\nPING\r\n".encode("utf-8"))
+        print(f"{role}: Master response - {master_conn.recv(1024).decode('utf-8')}")
+        # master_conn.close()
+        start_server("localhost", args.port)
+
+    else:
+        role = Role.MASTER
+        start_server("localhost", args.port)
 
 
 if __name__ == "__main__":
