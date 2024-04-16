@@ -1,9 +1,11 @@
-import argparse
+from argparse import ArgumentParser, Namespace
 import socket
 import time
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
+from enum import StrEnum
 from typing import Any
+
 
 @dataclass
 class Record:
@@ -11,7 +13,13 @@ class Record:
     expire: float | None
 
 
+class Role(StrEnum):
+    MASTER = "master"
+    SLAVE = "slave"
+
+
 COMMANDS = {"PING", "ECHO", "SET", "PX", "GET", "INFO", "REPLICATION"}
+role: Role | None = None
 
 storage: dict[str, Any] = dict()
 
@@ -85,20 +93,35 @@ def echo(value: str) -> bytes:
 
 
 def info() -> bytes:
-    return "$11\r\nrole:master\r\n".encode("utf-8")
+    data = f"role:{role}"
+    return f"${len(data)}\r\n{data}\r\n".encode("utf-8")
 
 
-def main() -> None:
-    arg_parser = argparse.ArgumentParser(description="My Redis")
-    arg_parser.add_argument("--port", default=6379, type=int)
-    args = arg_parser.parse_args()
-
-    server_socket = socket.create_server(("localhost", args.port), reuse_port=True)
+def start_server(domain: str, port: int) -> None:
+    server = socket.create_server((domain, port), reuse_port=True)
 
     with ThreadPoolExecutor() as pool:
         while True:
-            conn, _ = server_socket.accept()
+            conn, _ = server.accept()
             pool.submit(commands_handler, conn)
+
+
+def main() -> None:
+    global role
+
+    arg_parser = ArgumentParser(description="My Redis")
+    arg_parser.add_argument("--port", default=6379, type=int)
+    arg_parser.add_argument("--replicaof", nargs=2, type=str)
+    args = arg_parser.parse_args()
+
+    match arg_parser.parse_args():
+        case Namespace(replicaof=[str(), str()]):
+            role = Role.SLAVE
+            start_server("localhost", args.port)
+
+        case _:
+            role = Role.MASTER
+            start_server("localhost", args.port)
 
 
 if __name__ == "__main__":
