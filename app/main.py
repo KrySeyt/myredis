@@ -5,6 +5,7 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from enum import StrEnum
 from typing import Any
+from uuid import uuid4
 
 
 @dataclass
@@ -20,6 +21,9 @@ class Role(StrEnum):
 
 COMMANDS = {"PING", "ECHO", "SET", "PX", "GET", "INFO", "REPLICATION"}
 role: Role | None = None
+
+replication_id = "8371b4fb1155b71f4a04d3e1bc3e18c4a990aeeb"
+replication_offset = 0
 
 storage: dict[str, Any] = dict()
 
@@ -93,7 +97,7 @@ def echo(value: str) -> bytes:
 
 
 def info() -> bytes:
-    data = f"role:{role}"
+    data = f"role:{role}\r\nmaster_replid:{replication_id}\r\nmaster_repl_offset:{replication_offset}"
     return f"${len(data)}\r\n{data}\r\n".encode("utf-8")
 
 
