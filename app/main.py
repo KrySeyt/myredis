@@ -1,3 +1,4 @@
+import argparse
 import socket
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -40,17 +41,16 @@ def commands_handler(conn: socket.socket) -> None:
 
 def parse_redis_command(serialized_command: bytes) -> list[Any]:
     decoded_command = serialized_command.decode("utf-8")
-    commands = decoded_command.strip().split("\r\n")
+    commands: list[Any] = decoded_command.strip().split("\r\n")
     commands = [command for command in commands if command[0] not in ("*", "$")]
 
     for i, cmd in enumerate(commands):
-        print(cmd)
         if cmd.upper() in COMMANDS:
             commands[i] = cmd.upper()
 
         elif cmd.isnumeric():
             commands[i] = int(cmd)
-    
+
     return commands
 
 
@@ -82,9 +82,14 @@ def echo(value: str) -> bytes:
 
 
 def main() -> None:
+    arg_parser = argparse.ArgumentParser(description="My Redis")
+    arg_parser.add_argument("--port", default=6379, type=int)
+    args = arg_parser.parse_args()
+
+    server_socket = socket.create_server(("localhost", int(args.port)), reuse_port=True)
+
     with ThreadPoolExecutor() as pool:
         while True:
-            server_socket = socket.create_server(("localhost", 6379), reuse_port=True)
             conn, _ = server_socket.accept()
             pool.submit(commands_handler, conn)
 
