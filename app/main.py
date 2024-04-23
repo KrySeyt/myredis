@@ -152,9 +152,16 @@ def main() -> None:
         master_domain, master_port = args.replicaof
         master_port = int(master_port)
         master_conn = socket.create_connection((master_domain, master_port))
+
         master_conn.sendall("*1\r\n$4\r\nPING\r\n".encode("utf-8"))
-        print(f"{role}: Master response - {master_conn.recv(1024).decode('utf-8')}")
-        # master_conn.close()
+        master_conn.recv(1024)
+
+        master_conn.sendall("*3\r\n$8\r\nREPLCONF\r\n$14\r\nlistening-port\r\n$4\r\n6380\r\n".encode("utf-8"))
+        master_conn.recv(1024)
+
+        master_conn.sendall("*3\r\n$8\r\nREPLCONF\r\n$4\r\ncapa\r\n$6\r\npsync2\r\n".encode("utf-8"))
+        master_conn.recv(1024)
+
         start_server("localhost", args.port)
 
     else:
