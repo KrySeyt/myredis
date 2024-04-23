@@ -31,6 +31,7 @@ COMMANDS_TOKENS = {
     "LISTENING-PORT",
     "CAPA",
     "PSYNC2",
+    "PSYNC",
 }
 
 role: Role | None = None
@@ -75,6 +76,9 @@ def commands_handler(conn: socket.socket) -> None:
             case ["REPLCONF", "LISTENING-PORT", int(port)]:
                 conn.send(ok())
 
+            case ["PSYNC", str(master_replication_id), int(master_offset)]:
+                conn.send(full_resync())
+
             case _:
                 print(f"{role}: Unknown command - {parsed_command}")
 
@@ -95,6 +99,10 @@ def parse_redis_command(serialized_command: bytes) -> list[Any]:
 
 def ok() -> bytes:
     return "+OK\r\n".encode("utf-8")
+
+
+def full_resync() -> bytes:
+    return f"+FULLRESYNC {replication_id} 0\r\n".encode("utf-8")
 
 
 def ping() -> bytes:
@@ -160,6 +168,9 @@ def main() -> None:
         master_conn.recv(1024)
 
         master_conn.sendall("*3\r\n$8\r\nREPLCONF\r\n$4\r\ncapa\r\n$6\r\npsync2\r\n".encode("utf-8"))
+        master_conn.recv(1024)
+
+        master_conn.sendall("*3\r\n$5\r\nPSYNC\r\n$1\r\n?\r\n$2\r\n-1\r\n".encode("utf-8"))
         master_conn.recv(1024)
 
         start_server("localhost", args.port)
