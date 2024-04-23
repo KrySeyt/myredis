@@ -19,7 +19,20 @@ class Role(StrEnum):
     SLAVE = "slave"
 
 
-COMMANDS = {"PING", "ECHO", "SET", "PX", "GET", "INFO", "REPLICATION"}
+COMMANDS_TOKENS = {
+    "PING",
+    "ECHO",
+    "SET",
+    "PX",
+    "GET",
+    "INFO",
+    "REPLICATION",
+    "REPLCONF",
+    "LISTENING-PORT",
+    "CAPA",
+    "PSYNC2",
+}
+
 role: Role | None = None
 
 replication_id = "8371b4fb1155b71f4a04d3e1bc3e18c4a990aeeb"
@@ -56,6 +69,12 @@ def commands_handler(conn: socket.socket) -> None:
             case ["INFO", "REPLICATION"]:
                 conn.send(info())
 
+            case ["REPLCONF", "LISTENING-PORT", int(port)]:
+                conn.send(ok())
+
+            case ["REPLCONF", "LISTENING-PORT", int(port)]:
+                conn.send(ok())
+
             case _:
                 print(f"{role}: Unknown command - {parsed_command}")
 
@@ -65,13 +84,17 @@ def parse_redis_command(serialized_command: bytes) -> list[Any]:
     commands: list[Any] = decoded_command.strip().split("\r\n")
     commands = [command for command in commands if command[0] not in ("*", "$")]
     for i, cmd in enumerate(commands):
-        if cmd.upper() in COMMANDS:
+        if cmd.upper() in COMMANDS_TOKENS:
             commands[i] = cmd.upper()
 
         elif cmd.isnumeric():
             commands[i] = int(cmd)
 
     return commands
+
+
+def ok() -> bytes:
+    return "+OK\r\n".encode("utf-8")
 
 
 def ping() -> bytes:
@@ -81,7 +104,7 @@ def ping() -> bytes:
 def set_(key: str, value: str, expire: int | None = None) -> bytes:
     expire_time = time.time() + expire / 1000 if expire is not None else None
     storage[key] = Record(value, expire_time)
-    return "+OK\r\n".encode("utf-8")
+    return ok()
 
 
 def get(key: str) -> bytes:
