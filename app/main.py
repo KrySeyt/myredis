@@ -1,3 +1,4 @@
+import base64
 from argparse import ArgumentParser, Namespace
 import socket
 import time
@@ -53,6 +54,17 @@ def commands_handler(conn: socket.socket) -> None:
         parsed_command = parse_redis_command(data)
         print(f"{role}: Received command - {parsed_command}")
         match parsed_command:
+
+            case ["PSYNC", *_]:
+                conn.send(full_resync())
+
+                d = base64.b64decode(
+                    "UkVESVMwMDEx+glyZWRpcy12ZXIFNy4yLjD6CnJlZGlzLWJpdHPAQPoFY3Rpb"
+                    "WXCbQi8ZfoIdXNlZC1tZW3CsMQQAPoIYW9mLWJhc2XAAP/wbjv+wP9aog=="
+                )
+                print(d)
+                conn.sendall(f"${len(d)}\r\n".encode("utf-8") + d)
+
             case ["PING"]:
                 conn.sendall(ping())
 
@@ -76,9 +88,6 @@ def commands_handler(conn: socket.socket) -> None:
 
             case ["REPLCONF", "CAPA", "PSYNC2"]:
                 conn.send(ok())
-
-            case ["PSYNC", str(master_replication_id), int(master_offset)]:
-                conn.send(full_resync())
 
             case _:
                 print(f"{role}: Unknown command - {parsed_command}")
@@ -163,16 +172,18 @@ def main() -> None:
         master_conn = socket.create_connection((master_domain, master_port))
 
         master_conn.sendall("*1\r\n$4\r\nPING\r\n".encode("utf-8"))
-        master_conn.recv(1024)
+        print(master_conn.recv(1024))
 
         master_conn.sendall("*3\r\n$8\r\nREPLCONF\r\n$14\r\nlistening-port\r\n$4\r\n6380\r\n".encode("utf-8"))
-        master_conn.recv(1024)
+        print(master_conn.recv(1024))
 
         master_conn.sendall("*3\r\n$8\r\nREPLCONF\r\n$4\r\ncapa\r\n$6\r\npsync2\r\n".encode("utf-8"))
-        master_conn.recv(1024)
+        print(master_conn.recv(1024))
 
         master_conn.sendall("*3\r\n$5\r\nPSYNC\r\n$1\r\n?\r\n$2\r\n-1\r\n".encode("utf-8"))
-        master_conn.recv(1024)
+        print(master_conn.recv(1024))
+
+        print(master_conn.recv(1024))
 
         start_server("localhost", args.port)
 
@@ -182,4 +193,8 @@ def main() -> None:
 
 
 if __name__ == "__main__":
+    # d = base64.b64decode(
+    #     "UkVESVMwMDEx+glyZWRpcy12ZXIFNy4yLjD6CnJlZGlzLWJpdHPAQPoFY3RpbWXCbQi8ZfoIdXNlZC1tZW3CsMQQAPoIYW9mLWJhc2XAAP/wbjv+wP9aog=="
+    # )
+    # print(d)
     main()
