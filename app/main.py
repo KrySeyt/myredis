@@ -30,6 +30,7 @@ COMMANDS_TOKENS = {
     "REPLCONF",
     "LISTENING-PORT",
     "CAPA",
+    "EOF",
     "PSYNC2",
     "PSYNC",
 }
@@ -73,7 +74,7 @@ def commands_handler(conn: socket.socket) -> None:
             case ["REPLCONF", "LISTENING-PORT", int(port)]:
                 conn.send(ok())
 
-            case ["REPLCONF", "LISTENING-PORT", int(port)]:
+            case ["REPLCONF", "CAPA", "PSYNC2"]:
                 conn.send(ok())
 
             case ["PSYNC", str(master_replication_id), int(master_offset)]:
@@ -91,7 +92,7 @@ def parse_redis_command(serialized_command: bytes) -> list[Any]:
         if cmd.upper() in COMMANDS_TOKENS:
             commands[i] = cmd.upper()
 
-        elif cmd.isnumeric():
+        elif cmd.isnumeric() or cmd[1:].isnumeric():
             commands[i] = int(cmd)
 
     return commands

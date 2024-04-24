@@ -1,1 +1,1 @@
-print("100".isnumeric())
+print("-100".isdecimal())
