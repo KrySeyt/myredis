@@ -1,12 +1,14 @@
 import base64
-from argparse import ArgumentParser, Namespace
+import re
+import threading
+import traceback
+from argparse import ArgumentParser
 import socket
 import time
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from enum import StrEnum
-from typing import Any
-from uuid import uuid4
+from typing import Any, Callable, Type
 
 
 @dataclass
@@ -40,61 +42,103 @@ role: Role | None = None
 
 replication_id = "8371b4fb1155b71f4a04d3e1bc3e18c4a990aeeb"
 replication_offset = 0
+replicas = []
 
 storage: dict[str, Any] = dict()
 
 
+def resend_to_replicas(command: bytes) -> None:
+    print(f"{role}: Replicas count - {len(replicas)}")
+    for replica in replicas:
+        replica.send(command)
+
+
+def process_command(conn: socket.socket, command: list[Any], raw_cmd: bytes) -> None:
+    match command:
+        case ["PING"]:
+            conn.sendall(ping())
+
+        case ["ECHO", str(value)]:
+            conn.send(echo(value))
+
+        case ["SET", str(key), str(value) | int(value), "PX", int(expire)]:
+            resend_to_replicas(raw_cmd)
+            conn.send(set_(key, value, expire=expire))
+
+        case ["SET", str(key), str(value) | int(value)]:
+            resend_to_replicas(raw_cmd)
+            conn.send(set_(key, value))
+            print(f"{role}: {storage}")
+
+        case ["GET", str(key)]:
+            conn.send(get(key))
+
+        case ["INFO", "REPLICATION"]:
+            conn.send(info())
+
+        case ["REPLCONF", "LISTENING-PORT", int(port)]:
+            conn.send(ok())
+            address, _ = conn.getpeername()
+
+        case ["REPLCONF", "CAPA", "PSYNC2"]:
+            conn.send(ok())
+
+        case ["PSYNC", *_]:
+            conn.send(full_resync())
+
+            d = base64.b64decode(
+                "UkVESVMwMDEx+glyZWRpcy12ZXIFNy4yLjD6CnJlZGlzLWJpdHPAQPoFY3Rpb"
+                "WXCbQi8ZfoIdXNlZC1tZW3CsMQQAPoIYW9mLWJhc2XAAP/wbjv+wP9aog=="
+            )
+
+            conn.sendall(f"${len(d)}\r\n".encode("utf-8") + d)
+            replicas.append(conn)
+
+        case _:
+            print(f"{role}: Unknown command - {command}")
+
+
 def commands_handler(conn: socket.socket) -> None:
+    cmd_buffer = bytearray()
     while True:
         data = conn.recv(1024)
 
         if not data:
             continue
 
-        parsed_command = parse_redis_command(data)
-        print(f"{role}: Received command - {parsed_command}")
-        match parsed_command:
+        cmd_buffer += data
 
-            case ["PSYNC", *_]:
-                conn.send(full_resync())
+        cmd_delimiter = b"*"
+        for cmd in (cmd_delimiter + cmd for cmd in cmd_buffer.split(cmd_delimiter) if cmd):
+            if is_full_command(cmd):
+                parsed_command = parse_redis_command(cmd)
+                print(f"{role}: Received command - {parsed_command}")
+                process_command(conn=conn, command=parsed_command, raw_cmd=cmd)
+            else:
+                cmd_buffer = cmd
+                break
+        else:
+            cmd_buffer = bytearray()
 
-                d = base64.b64decode(
-                    "UkVESVMwMDEx+glyZWRpcy12ZXIFNy4yLjD6CnJlZGlzLWJpdHPAQPoFY3Rpb"
-                    "WXCbQi8ZfoIdXNlZC1tZW3CsMQQAPoIYW9mLWJhc2XAAP/wbjv+wP9aog=="
-                )
-                print(d)
-                conn.sendall(f"${len(d)}\r\n".encode("utf-8") + d)
 
-            case ["PING"]:
-                conn.sendall(ping())
+def is_full_command(cmd: bytes) -> bool:
+    if b"\r\n" not in cmd:
+        return False
 
-            case ["ECHO", str(value)]:
-                conn.send(echo(value))
+    commands_array_head = cmd.split(b"\r\n", maxsplit=1)
+    elems_count = int(commands_array_head[0][1:])
 
-            case ["SET", str(key), str(value), "PX", int(expire)]:
-                conn.send(set_(key, value, expire=expire))
+    command_pattern = rf"(\$\d+\r\n[\w\-\?]+\r\n){'{' + str(elems_count) + '}'}".encode("utf-8")
+    command = cmd[len(commands_array_head) + 2:]
 
-            case ["SET", str(key), str(value)]:
-                conn.send(set_(key, value))
-
-            case ["GET", str(key)]:
-                conn.send(get(key))
-
-            case ["INFO", "REPLICATION"]:
-                conn.send(info())
-
-            case ["REPLCONF", "LISTENING-PORT", int(port)]:
-                conn.send(ok())
-
-            case ["REPLCONF", "CAPA", "PSYNC2"]:
-                conn.send(ok())
-
-            case _:
-                print(f"{role}: Unknown command - {parsed_command}")
+    return re.match(command_pattern, command)
 
 
 def parse_redis_command(serialized_command: bytes) -> list[Any]:
-    decoded_command = serialized_command.decode("utf-8")
+    try:
+        decoded_command = serialized_command.decode("utf-8")
+    except UnicodeDecodeError:
+        raise ValueError(serialized_command)
     commands: list[Any] = decoded_command.strip().split("\r\n")
     commands = [command for command in commands if command[0] not in ("*", "$")]
     for i, cmd in enumerate(commands):
@@ -147,13 +191,25 @@ def info() -> bytes:
     return f"${len(data)}\r\n{data}\r\n".encode("utf-8")
 
 
+def print_exceptions(func: Callable, exception_baseclass: Type[BaseException]) -> Callable:
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except exception_baseclass as err:
+            traceback.print_exception(err)
+            raise
+
+    return wrapper
+
+
 def start_server(domain: str, port: int) -> None:
     server = socket.create_server((domain, port), reuse_port=True)
 
     with ThreadPoolExecutor() as pool:
+        print(f"{role}: Ready to accept")
         while True:
             conn, _ = server.accept()
-            pool.submit(commands_handler, conn)
+            pool.submit(print_exceptions(commands_handler, BaseException), conn)
 
 
 def main() -> None:
@@ -182,8 +238,8 @@ def main() -> None:
 
         master_conn.sendall("*3\r\n$5\r\nPSYNC\r\n$1\r\n?\r\n$2\r\n-1\r\n".encode("utf-8"))
         print(master_conn.recv(1024))
-
         print(master_conn.recv(1024))
+        threading.Thread(target=print_exceptions(commands_handler, BaseException), args=(master_conn,)).start()
 
         start_server("localhost", args.port)
 
@@ -193,8 +249,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    # d = base64.b64decode(
-    #     "UkVESVMwMDEx+glyZWRpcy12ZXIFNy4yLjD6CnJlZGlzLWJpdHPAQPoFY3RpbWXCbQi8ZfoIdXNlZC1tZW3CsMQQAPoIYW9mLWJhc2XAAP/wbjv+wP9aog=="
-    # )
-    # print(d)
     main()
