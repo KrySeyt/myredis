@@ -1,5 +1,6 @@
 import base64
 import re
+import select
 import threading
 import traceback
 from argparse import ArgumentParser
@@ -37,14 +38,19 @@ COMMANDS_TOKENS = {
     "PSYNC2",
     "PSYNC",
     "GETACK",
+    "WAIT",
 }
 
 role: Role | None = None
 
+args = None
+
 replication_id = "8371b4fb1155b71f4a04d3e1bc3e18c4a990aeeb"
 replication_offset = 0
 processed = 0
-replicas = []
+replicas = {}
+
+z = 0
 
 storage: dict[str, Any] = dict()
 
@@ -53,6 +59,7 @@ def resend_to_replicas(command: bytes) -> None:
     print(f"{role}: Replicas count - {len(replicas)}")
     for replica in replicas:
         replica.send(command)
+        replicas[replica] = 1
 
 
 def process_command(conn: socket.socket, command: list[Any], raw_cmd: bytes) -> None:
@@ -103,10 +110,22 @@ def process_command(conn: socket.socket, command: list[Any], raw_cmd: bytes) -> 
                 )
 
                 conn.sendall(f"${len(d)}\r\n".encode("utf-8") + d)
-                replicas.append(conn)
+                replicas[conn] = 0
 
         case ["REPLCONF", "GETACK", "*"]:
             conn.send(ack())
+
+        case ["WAIT", int(replicas_count), int(timeout)]:
+            if role == Role.MASTER:
+                conn.send(wait(replicas_count, timeout))
+
+        case ["REPLCONF", "ACK", int(val)]:
+            global z
+            z += 1
+
+        case ["CONFIG", "GET", str(key)]:
+            if role == Role.MASTER:
+                conn.send(config_get(key))
 
         case _:
             print(f"{role}: Unknown command - {command}")
@@ -153,14 +172,11 @@ def is_full_command(cmd: bytes) -> bool:
     command_pattern = rf"(\$\d+\r\n[\w\-\?\*]+\r\n){'{' + str(elems_count) + '}'}".encode("utf-8")
     command = cmd[len(commands_array_head) + 2:]
 
-    return re.match(command_pattern, command)
+    return bool(re.match(command_pattern, command))
 
 
 def parse_redis_command(serialized_command: bytes) -> list[Any]:
-    try:
-        decoded_command = serialized_command.decode("utf-8")
-    except UnicodeDecodeError:
-        raise ValueError(serialized_command)
+    decoded_command = serialized_command.decode("utf-8")
     commands: list[Any] = decoded_command.strip().split("\r\n")[1:]
     commands = [command for command in commands if command[0] != "$"]
 
@@ -172,6 +188,25 @@ def parse_redis_command(serialized_command: bytes) -> list[Any]:
             commands[i] = int(cmd)
 
     return commands
+
+
+def config_get(key) -> bytes:
+    val = getattr(args, key)
+    return f"*2\r\n${len(key)}\r\n{key}\r\n$3\r\nACK\r\n${len(str(val))}\r\n{val}\r\n".encode("utf-8")
+
+
+def wait(replicas_count: int, timeout: int) -> bytes:
+    global z
+    for repl in (repl for repl, i in replicas.items() if i == 1):
+        repl.send("*3\r\n$8\r\nREPLCONF\r\n$6\r\nGETACK\r\n$1\r\n*\r\n".encode("utf-8"))
+
+    start = time.time()
+    while z < replicas_count and (time.time() - start) < timeout / 1000:
+        time.sleep(0.01)
+
+    d = z + len([repl for repl, i in replicas.items() if i == 0])
+    z = 0
+    return f":{d}\r\n".encode("utf-8")
 
 
 def ack() -> bytes:
@@ -241,12 +276,15 @@ def start_server(domain: str, port: int) -> None:
 
 def main() -> None:
     global role
+    global args
 
     arg_parser = ArgumentParser(description="My Redis")
     arg_parser.add_argument("--port", default=6379, type=int)
     arg_parser.add_argument("--replicaof", nargs=2, type=str)
+    arg_parser.add_argument("--dir", type=str)
+    arg_parser.add_argument("--dbfilename", type=str)
     args = arg_parser.parse_args()
-
+    print(args.port)
     if args.replicaof is not None:
         role = Role.SLAVE
 
@@ -266,7 +304,7 @@ def main() -> None:
         master_conn.sendall("*3\r\n$5\r\nPSYNC\r\n$1\r\n?\r\n$2\r\n-1\r\n".encode("utf-8"))
         print(master_conn.recv(1024))
         print(master_conn.recv(1024))
-        threading.Thread(target=print_exceptions(commands_handler, BaseException), args=(master_conn,)).start()
+        threading.Thread(target=print_exceptions(commands_handler, BaseException), args=(master_conn,), daemon=True).start()
 
         start_server("localhost", args.port)
 
