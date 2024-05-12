@@ -16,6 +16,7 @@ __all__ = (
 import time
 from typing import TypeVar
 
+from myasync.lock import Lock
 from myasync.loop import (
     AbstractTask,
     Await,
@@ -28,7 +29,6 @@ from myasync.task import (
     Task,
     TaskProxy,
 )
-from myasync.lock import Lock
 
 T_co = TypeVar("T_co", covariant=True)
 
@@ -38,7 +38,7 @@ loop = EventLoop(SelectSelector())
 def sleep(seconds: float = 0) -> Coroutine[None]:
     start_time = time.time()
 
-    while start_time + seconds < time.time():
+    while start_time + seconds > time.time():
         yield None
 
 

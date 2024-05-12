@@ -1,0 +1,88 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.mypy]
+strict = true
+warn_unused_configs = true
+check_untyped_defs = true
+follow_imports = "silent"
+warn_redundant_casts = true
+warn_unused_ignores = true
+disallow_any_generics = true
+no_implicit_reexport = true
+disallow_untyped_defs = true
+
+[tool.ruff]
+line-length = 120
+target-version="py311"
+src = ["src"]
+include = ["src/**.py", "tests/**.py"]
+lint.select = [
+    "ALL"
+]
+lint.ignore = [
+    "ARG",
+    "ANN",
+    "D",
+    "EM101",
+    "EM102",
+    "PT001",
+    "PT023",
+    "SIM108",
+    "SIM114",
+    "TRY003",
+    "PLW2901",
+    "RET505",
+    "PLR0913",
+    "S101",
+    "S608",
+    "SIM117",
+    "S105",
+    "FBT001",
+    "G004"
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = [
+    "TID252",
+    "PLR2004",
+    "S101",
+    "S311",
+    "S105",
+    "S106",
+]
+
+[tool.ruff.lint.isort]
+no-lines-before = ["local-folder"]
+
+[project]
+name = "myredis"
+version = "0.0.0"
+authors = [
+    { name = "Sequew", email = "kryseyt@gmail.com" },
+]
+description = "Chat with Clean Architecture, TDD and more"
+requires-python = ">=3.11"
+dependencies = [
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest",
+]
+lint = [
+    "ruff",
+]
+types-checking = [
+    "mypy",
+]
+dev = [
+    "myredis[test, lint, types-checking]",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/KrySeyt/JustChat"
