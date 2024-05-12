@@ -66,7 +66,6 @@ def recv(conn: socket.socket, size: int) -> myasync.Coroutine[bytes]:
 
 
 def resend_to_replicas(command: bytes) -> myasync.Coroutine[None]:
-    print(f"{role}: Replicas count - {len(replicas)}")
     for replica in replicas:
         yield from send(replica, command)
         replicas[replica] = 1
