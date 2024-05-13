@@ -10,7 +10,7 @@ def str_(value: str) -> bytes:
 
 
 def not_found() -> bytes:
-    return b"$-1\r\n"
+    return b"+-1\r\n"
 
 
 def pong() -> bytes:

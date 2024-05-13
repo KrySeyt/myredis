@@ -9,6 +9,12 @@ from typing import Any
 
 import myasync
 
+from myredis.application.echo import Echo
+from myredis.application.get import Get
+from myredis.application.ping import Ping
+from myredis.application.set import Set
+from myredis.external.ram_values_storage import RAMValuesStorage
+
 
 @dataclass
 class Record:
@@ -52,7 +58,7 @@ replicas: dict[socket.socket, int] = {}
 
 z = 0
 
-storage: dict[str, Any] = dict()
+storage: RAMValuesStorage = RAMValuesStorage()
 
 
 def send(conn: socket.socket, data: bytes) -> myasync.Coroutine[None]:
@@ -247,29 +253,27 @@ def full_resync() -> bytes:
 
 
 def ping() -> bytes:
-    return b"+PONG\r\n"
+    interactor = Ping()
+    value = interactor()
+    return f"+{value}\r\n".encode("utf-8")
 
 
 def set_(key: str, value: Any, expire: int | None = None) -> bytes:
-    expire_time = time.time() + expire / 1000 if expire is not None else None
-    storage[key] = Record(value, expire_time)
+    interactor = Set(storage)
+    interactor(key, value, expire)
     return ok()
 
 
 def get(key: str) -> bytes:
-    record = storage.get(key)
-
-    if record is None:
-        return b"$-1\r\n"
-
-    if record.expire is not None and record.expire < time.time():
-        storage.pop(key)
-        return b"$-1\r\n"
-
-    return f"+{record.value}\r\n".encode()
+    interactor = Get(storage)
+    value = interactor(key)
+    value = value if value is not None else -1
+    return f"+{value}\r\n".encode()
 
 
-def echo(value: str) -> bytes:
+def echo(input_str: str) -> bytes:
+    interactor = Echo()
+    value = interactor(input_str)
     return f"${len(value)}\r\n{value}\r\n".encode()
 
 

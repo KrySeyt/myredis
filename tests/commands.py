@@ -2,6 +2,13 @@ from typing import Any
 
 
 def set_(key: str, value: Any, expire: int | None = None) -> bytes:
+    """
+    :param key:
+    :param value:
+    :param expire: expire time in milliseconds
+    :return:
+    """
+
     if expire is None:
         return (
             f"*3\r\n"
