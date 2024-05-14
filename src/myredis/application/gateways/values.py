@@ -1,19 +1,18 @@
 from abc import ABC, abstractmethod
-from typing import Any
+
+from myredis.domain.key import Key
+from myredis.domain.record import Record
 
 
 class ValuesStorage(ABC):
     @abstractmethod
-    def get(self, key: str) -> object | None:
+    def get(self, key: Key) -> Record | None:
         raise NotImplementedError
 
     @abstractmethod
-    def set(self, key: str, value: Any, expire_time: int | None) -> None:
-        """
-        :param key:
-        :param value:
-        :param expire_time: expire time in milliseconds
-        :return:
-        """
+    def set(self, key: Key, record: Record) -> None:
+        raise NotImplementedError
 
+    @abstractmethod
+    def get_all(self) -> dict[Key, Record]:
         raise NotImplementedError

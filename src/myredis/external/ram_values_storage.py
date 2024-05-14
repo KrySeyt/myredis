@@ -1,28 +1,19 @@
+import copy
 import time
-from dataclasses import dataclass
 
 from myredis.application.gateways.values import ValuesStorage
-
-
-@dataclass
-class Record:
-    """
-    :param expires: expire time in seconds
-    """
-
-    value: object
-    expires: float | None = None
+from myredis.domain.key import Key
+from myredis.domain.record import Record
 
 
 class RAMValuesStorage(ValuesStorage):
     def __init__(self) -> None:
-        self._storage: dict[str, Record] = {}
+        self._storage: dict[Key, Record] = {}
 
-    def set(self, key: str, value: object, expire_time: int | None = None) -> None:
-        expire_time_seconds = time.time() + expire_time / 1000 if expire_time else None
-        self._storage[key] = Record(value, expire_time_seconds)
+    def set(self, key: Key, record: Record) -> None:
+        self._storage[key] = record
 
-    def get(self, key: str) -> object | None:
+    def get(self, key: Key) -> Record | None:
         record = self._storage.get(key, None)
 
         if record is None:
@@ -31,4 +22,7 @@ class RAMValuesStorage(ValuesStorage):
         if record.expires and record.expires < time.time():
             return None
 
-        return record.value
+        return record
+
+    def get_all(self) -> dict[Key, Record]:
+        return copy.deepcopy(self._storage)

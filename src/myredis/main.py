@@ -13,13 +13,9 @@ from myredis.application.echo import Echo
 from myredis.application.get import Get
 from myredis.application.ping import Ping
 from myredis.application.set import Set
+from myredis.application.sync_replica import SyncReplica
+from myredis.domain.record import Record
 from myredis.external.ram_values_storage import RAMValuesStorage
-
-
-@dataclass
-class Record:
-    value: Any
-    expire: float | None
 
 
 class Role(StrEnum):
@@ -36,15 +32,17 @@ COMMANDS_TOKENS = {
     "INFO",
     "REPLICATION",
     "REPLCONF",
-    "LISTENING-PORT",
-    "CAPA",
+    # "LISTENING-PORT",
+    # "CAPA",
     "EOF",
-    "PSYNC2",
-    "PSYNC",
+    # "PSYNC2",
+    # "PSYNC",
     "GETACK",
     "WAIT",
-    "FULLRESYNC",
+    # "FULLRESYNC",
     "CONFIG",
+    "REPLICA",
+    "SYNC",
 }
 
 role: Role | None = None
@@ -82,6 +80,7 @@ def process_command(conn: socket.socket, command: list[Any], raw_cmd: bytes) -> 
     match command:
         case ["PING"]:
             if role == Role.MASTER:
+                print("ping")
                 yield from send(conn, ping())
 
         case ["ECHO", str(value)]:
@@ -106,24 +105,20 @@ def process_command(conn: socket.socket, command: list[Any], raw_cmd: bytes) -> 
         case ["INFO", "REPLICATION"]:
             yield from send(conn, info())
 
-        case ["REPLCONF", "LISTENING-PORT", int(port)]:
+        # case ["REPLCONF", "LISTENING-PORT", int(port)]:
+        #     if role == Role.MASTER:
+        #         yield from send(conn, ok())
+        #
+        # case ["REPLCONF", "CAPA", "PSYNC2"]:
+        #     if role == Role.MASTER:
+        #         yield from send(conn, ok())
+
+        case ["REPLICA", "SYNC"]:
             if role == Role.MASTER:
-                yield from send(conn, ok())
+                # yield from send(conn, full_resync())
 
-        case ["REPLCONF", "CAPA", "PSYNC2"]:
-            if role == Role.MASTER:
-                yield from send(conn, ok())
-
-        case ["PSYNC", *_]:
-            if role == Role.MASTER:
-                yield from send(conn, full_resync())
-
-                d = base64.b64decode(
-                    "UkVESVMwMDEx+glyZWRpcy12ZXIFNy4yLjD6CnJlZGlzLWJpdHPAQPoFY3Rpb"
-                    "WXCbQi8ZfoIdXNlZC1tZW3CsMQQAPoIYW9mLWJhc2XAAP/wbjv+wP9aog==",
-                )
-
-                yield from send(conn, f"${len(d)}\r\n".encode() + d)
+                d = sync_replica()
+                yield from send(conn, d)
                 replicas[conn] = 0
 
         case ["REPLCONF", "GETACK", "*"]:
@@ -166,8 +161,10 @@ def commands_handler(conn: socket.socket) -> myasync.Coroutine[None]:
         cmd_delimiter = b"*"
         for cmd in (cmd_delimiter + cmd for cmd in cmd_buffer.split(cmd_delimiter) if cmd):
             cmd = cmd.replace(placeholder, b"*\r\n")
+            print(cmd)
 
             if not is_command(cmd):
+                print("Not command")
                 continue
 
             if is_full_command(cmd):
@@ -186,9 +183,9 @@ def commands_handler(conn: socket.socket) -> myasync.Coroutine[None]:
 
 def is_command(cmd: bytes) -> bool:
     return all((
-            cmd and cmd.startswith(b"*"),
-            not cmd.startswith(b"*+FULLRESYNC"),
-            b"REDIS" not in cmd,
+            cmd,
+            cmd.startswith(b"*"),
+            not cmd.startswith("SYNC".encode("utf-8"))
     ))
 
 
@@ -252,22 +249,42 @@ def full_resync() -> bytes:
     return f"+FULLRESYNC {replication_id} 0\r\n".encode()
 
 
+def sync_replica() -> bytes:
+    interactor = SyncReplica(storage)
+    records = interactor()
+    command = [f"SYNC%{len(records)}\r\n"]
+    for key, record in records.items():
+        command.append(
+            f"+{key}\r\n"
+            f"+{record.value}\r\n"
+            f":{record.expires if record.expires else -1}\r\n"
+        )
+
+    return "".join(command).encode("utf-8")
+
+
 def ping() -> bytes:
     interactor = Ping()
     value = interactor()
     return f"+{value}\r\n".encode("utf-8")
 
 
-def set_(key: str, value: Any, expire: int | None = None) -> bytes:
+def set_(key: str, value: object, expire: int | None = None) -> bytes:
     interactor = Set(storage)
-    interactor(key, value, expire)
+    interactor(
+        key,
+        Record(
+            value,
+            time.time() + expire / 1000 if expire is not None else None
+        )
+    )
     return ok()
 
 
 def get(key: str) -> bytes:
     interactor = Get(storage)
-    value = interactor(key)
-    value = value if value is not None else -1
+    record = interactor(key)
+    value = record.value if record is not None else -1
     return f"+{value}\r\n".encode()
 
 
@@ -308,13 +325,13 @@ def connect_to_master(args) -> myasync.Coroutine[None]:
     yield from send(master_conn, b"*1\r\n$4\r\nPING\r\n")
     yield from recv(master_conn, 1024)
 
-    yield from send(master_conn, b"*3\r\n$8\r\nREPLCONF\r\n$14\r\nlistening-port\r\n$4\r\n6380\r\n")
-    yield from recv(master_conn, 1024)
+    # yield from send(master_conn, b"*3\r\n$8\r\nREPLCONF\r\n$14\r\nlistening-port\r\n$4\r\n6380\r\n")
+    # yield from recv(master_conn, 1024)
+    #
+    # yield from send(master_conn, b"*3\r\n$8\r\nREPLCONF\r\n$4\r\ncapa\r\n$6\r\npsync2\r\n")
+    # yield from recv(master_conn, 1024)
 
-    yield from send(master_conn, b"*3\r\n$8\r\nREPLCONF\r\n$4\r\ncapa\r\n$6\r\npsync2\r\n")
-    yield from recv(master_conn, 1024)
-
-    yield from send(master_conn, b"*3\r\n$5\r\nPSYNC\r\n$1\r\n?\r\n$2\r\n-1\r\n")
+    yield from send(master_conn, b"*2\r\n$7\r\nREPLICA\r\n$4\r\nSYNC\r\n")
 
     myasync.create_task(commands_handler(master_conn))
 
