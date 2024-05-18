@@ -1,9 +1,12 @@
 import socket
 import time
 
-from myasync import Coroutine, Event, create_task, recv, send, sleep
+from myasync import Coroutine, Event, create_task, gather, recv, send, sleep
 
 from myredis.application.gateways.replicas import Replica, ReplicaSentWrongDataError, ReplicasManager
+from myredis.domain.key import Key
+from myredis.domain.record import Record
+from myredis.external import commands
 
 replicas: list[Replica] = []
 
@@ -26,7 +29,7 @@ class TCPReplicasManager(ReplicasManager):
 
     def wait_replica(self, replica: Replica, is_timeout: Event) -> Coroutine[None]:
         yield from replica.send(
-            b"*3\r\n$8\r\nREPLCONF\r\n$6\r\nGETACK\r\n$1\r\n*\r\n",
+            commands.replica_get_ack(),
         )
 
         data = bytearray()
@@ -67,3 +70,7 @@ class TCPReplicasManager(ReplicasManager):
         yield None
 
         replicas.append(replica)
+
+    def set(self, key: Key, record: Record) -> Coroutine[None]:
+        cmd = commands.set_(key, record.value, int(record.expires * 1000) if record.expires else None)
+        yield from gather(*(create_task(repl.send(cmd)) for repl in replicas))

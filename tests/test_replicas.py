@@ -1,4 +1,4 @@
-from tests import commands, responses
+from myredis.external import responses, commands
 from tests.client import create_client
 from tests.server import ServerManager
 

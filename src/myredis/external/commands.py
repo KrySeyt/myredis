@@ -66,3 +66,25 @@ def wait(replicas_count: int, expire: int) -> bytes:
         f"${len(str(replicas_count))}\r\n{replicas_count}\r\n"
         f"${len(str(expire))}\r\n{expire}\r\n"
     ).encode()
+
+
+def replica_sync() -> bytes:
+    return (
+        b"*2\r\n"
+        b"$7\r\n"
+        b"REPLICA\r\n"
+        b"$4\r\n"
+        b"SYNC\r\n"
+    )
+
+
+def replica_get_ack() -> bytes:
+    return (
+        b"*3\r\n"
+        b"$8\r\n"
+        b"REPLCONF\r\n"
+        b"$6\r\n"
+        b"GETACK\r\n"
+        b"$1\r\n"
+        b"*\r\n"
+    )

@@ -6,6 +6,7 @@ from myasync import Coroutine, recv, send
 from myredis.application.gateways.master import Master, MasterSentWrongDataError
 from myredis.domain.key import Key
 from myredis.domain.record import Record
+from myredis.external import commands, responses
 
 
 class TCPMaster(Master):
@@ -52,7 +53,7 @@ class TCPMaster(Master):
     def get_records(self) -> Coroutine[dict[Key, Record]]:
         yield from send(
             self._master_conn,
-            b"*2\r\n$7\r\nREPLICA\r\n$4\r\nSYNC\r\n",
+            commands.replica_sync(),
         )
 
         data = bytearray()
@@ -83,7 +84,7 @@ class TCPMaster(Master):
         return self.parse_records(data)
 
     def ping(self) -> Coroutine[str]:
-        yield from send(self._master_conn, b"*1\r\n$4\r\nPING\r\n")
+        yield from send(self._master_conn, commands.ping())
 
         data = bytearray()
         while True:
@@ -94,10 +95,10 @@ class TCPMaster(Master):
 
             data += data_part
 
-            if data == b"+PONG\r\n":
+            if data == responses.pong():
                 break
 
-            if not b"+PONG\r\n".startswith(data):
+            if not responses.pong().startswith(data):
                 raise MasterSentWrongDataError(data)
 
         value = self.parse_value(data)

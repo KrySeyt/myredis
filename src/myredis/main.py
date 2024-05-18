@@ -59,12 +59,6 @@ replicas: dict[socket.socket, int] = {}
 storage: RAMValuesStorage = RAMValuesStorage()
 
 
-def resend_to_replicas(command: bytes) -> myasync.Coroutine[None]:
-    for replica in replicas:
-        yield from send(replica, command)
-        replicas[replica] = 1
-
-
 def process_command(conn: socket.socket, command: list[Any], raw_cmd: bytes) -> myasync.Coroutine[None]:
     global processed
     match command:
@@ -80,13 +74,11 @@ def process_command(conn: socket.socket, command: list[Any], raw_cmd: bytes) -> 
                 yield from send(conn, echo_response)
 
         case ["SET", str(key), str(value) | int(value), "PX", int(expire)]:
-            resend_to_replicas(raw_cmd)
             response = yield from set_(key, value, expire=expire)
             if role == Role.MASTER:
                 yield from send(conn, response)
 
         case ["SET", str(key), str(value) | int(value)]:
-            resend_to_replicas(raw_cmd)
             response = yield from set_(key, value)
             if role == Role.MASTER:
                 yield from send(conn, response)
@@ -246,7 +238,7 @@ def ping() -> Coroutine[bytes]:
 
 
 def set_(key: str, value: object, expire: int | None = None) -> Coroutine[bytes]:
-    interactor = Set(storage)
+    interactor = Set(storage, TCPReplicasManager())
     yield from interactor(
         key,
         Record(

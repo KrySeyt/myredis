@@ -1,7 +1,7 @@
 import socket
 
-from tests.commands import ping
-from tests.responses import pong
+from myredis.external.commands import ping
+from myredis.external.responses import pong
 
 
 def test(client: socket.socket) -> None:

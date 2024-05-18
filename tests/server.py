@@ -3,7 +3,7 @@ import subprocess
 from dataclasses import dataclass
 from typing import Any
 
-from tests import commands, responses
+from myredis.external import responses, commands
 from tests.client import create_client
 
 logger = logging.getLogger(__name__)

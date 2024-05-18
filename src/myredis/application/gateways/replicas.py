@@ -2,6 +2,9 @@ from abc import ABC, abstractmethod
 
 from myasync import Coroutine
 
+from myredis.domain.key import Key
+from myredis.domain.record import Record
+
 
 class ReplicaSentWrongDataError(ValueError):
     pass
@@ -24,4 +27,8 @@ class ReplicasManager(ABC):
 
     @abstractmethod
     def add_replica(self, replica: Replica) -> Coroutine[None]:
+        raise NotImplementedError
+
+    @abstractmethod
+    def set(self, key: Key, record: Record) -> Coroutine[None]:
         raise NotImplementedError
