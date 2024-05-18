@@ -17,17 +17,12 @@ python -m venv .venv
 . ./.venv/bin/activate 
 ```
 
-- Install [myasync](https://github.com/KrySeyt/myasync)
-```shell
-git clone git@github.com:KrySeyt/myasync.git && pip install ./myasync
-```
-
 - Install `myredis`
 ```shell
 pip install .
 ```
 
-- Run `myredis`
+- Run `myredis` server
 ```shell
 python -m src.myredis
 ```
