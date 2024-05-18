@@ -13,6 +13,9 @@ class RAMValuesStorage(ValuesStorage):
     def set(self, key: Key, record: Record) -> None:
         self._storage[key] = record
 
+    def set_records(self, records: dict[Key, Record]) -> None:
+        self._storage = copy.deepcopy(records)
+
     def get(self, key: Key) -> Record | None:
         record = self._storage.get(key, None)
 

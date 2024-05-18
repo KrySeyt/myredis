@@ -14,8 +14,10 @@ from myredis.application.get import Get
 from myredis.application.ping import Ping
 from myredis.application.set import Set
 from myredis.application.sync_replica import SyncReplica
+from myredis.application.sync_with_master import SyncWithMaster
 from myredis.domain.record import Record
 from myredis.external.ram_values_storage import RAMValuesStorage
+from myredis.external.tcp_master import TCPMaster
 
 
 class Role(StrEnum):
@@ -105,18 +107,8 @@ def process_command(conn: socket.socket, command: list[Any], raw_cmd: bytes) -> 
         case ["INFO", "REPLICATION"]:
             yield from send(conn, info())
 
-        # case ["REPLCONF", "LISTENING-PORT", int(port)]:
-        #     if role == Role.MASTER:
-        #         yield from send(conn, ok())
-        #
-        # case ["REPLCONF", "CAPA", "PSYNC2"]:
-        #     if role == Role.MASTER:
-        #         yield from send(conn, ok())
-
         case ["REPLICA", "SYNC"]:
             if role == Role.MASTER:
-                # yield from send(conn, full_resync())
-
                 d = sync_replica()
                 yield from send(conn, d)
                 replicas[conn] = 0
@@ -325,13 +317,8 @@ def connect_to_master(args) -> myasync.Coroutine[None]:
     yield from send(master_conn, b"*1\r\n$4\r\nPING\r\n")
     yield from recv(master_conn, 1024)
 
-    # yield from send(master_conn, b"*3\r\n$8\r\nREPLCONF\r\n$14\r\nlistening-port\r\n$4\r\n6380\r\n")
-    # yield from recv(master_conn, 1024)
-    #
-    # yield from send(master_conn, b"*3\r\n$8\r\nREPLCONF\r\n$4\r\ncapa\r\n$6\r\npsync2\r\n")
-    # yield from recv(master_conn, 1024)
-
-    yield from send(master_conn, b"*2\r\n$7\r\nREPLICA\r\n$4\r\nSYNC\r\n")
+    sync_interactor = SyncWithMaster(storage, TCPMaster(master_conn))
+    sync_interactor()
 
     myasync.create_task(commands_handler(master_conn))
 

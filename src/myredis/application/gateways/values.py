@@ -6,11 +6,15 @@ from myredis.domain.record import Record
 
 class ValuesStorage(ABC):
     @abstractmethod
-    def get(self, key: Key) -> Record | None:
+    def set(self, key: Key, record: Record) -> None:
         raise NotImplementedError
 
     @abstractmethod
-    def set(self, key: Key, record: Record) -> None:
+    def set_records(self, records: dict[Key, Record]) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def get(self, key: Key) -> Record | None:
         raise NotImplementedError
 
     @abstractmethod
