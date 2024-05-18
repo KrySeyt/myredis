@@ -65,7 +65,7 @@ version = "0.0.0"
 authors = [
     { name = "Sequew", email = "kryseyt@gmail.com" },
 ]
-description = "Chat with Clean Architecture, TDD and more"
+description = "My Redis with MyAsync"
 requires-python = ">=3.11"
 dependencies = [
     "myasync@git+https://github.com/KrySeyt/myasync"
