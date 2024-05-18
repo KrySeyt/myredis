@@ -3,16 +3,12 @@ from typing import Any
 
 from myasync import Coroutine, send, recv
 
-from myredis.application.gateways.master import MasterGateway
+from myredis.application.gateways.master import Master, MasterSentWrongData
 from myredis.domain.key import Key
 from myredis.domain.record import Record
 
 
-class WrongData(ValueError):
-    pass
-
-
-class TCPMaster(MasterGateway):
+class TCPMaster(Master):
     def __init__(self, master_conn: socket.socket) -> None:
         self._master_conn = master_conn
 
@@ -69,7 +65,7 @@ class TCPMaster(MasterGateway):
             data += data_part
 
             if len(data) > 5 and not data.startswith("SYNC%".encode("utf-8")):
-                raise WrongData(data)
+                raise MasterSentWrongData(data)
 
             if "\r\n".encode("utf-8") not in data:
                 continue
@@ -82,6 +78,26 @@ class TCPMaster(MasterGateway):
                 break
 
             if splitters > (3 * records_count) + 1:
-                raise WrongData(data)
+                raise MasterSentWrongData(data)
 
         return self.parse_records(data)
+
+    def ping(self) -> Coroutine[str]:
+        yield from send(self._master_conn, "*1\r\n$4\r\nPING\r\n".encode("utf-8"))
+
+        data = bytearray()
+        while True:
+            data_part = yield from recv(self._master_conn, 4096)
+
+            if not data_part:
+                raise ConnectionResetError
+
+            data += data_part
+
+            if data == "+PONG\r\n".encode("utf-8"):
+                break
+
+            if not "+PONG\r\n".encode("utf-8").startswith(data):
+                raise MasterSentWrongData(data)
+
+        return self.parse_value(data)
