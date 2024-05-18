@@ -1,6 +1,8 @@
 import socket
 from typing import Any
 
+from myasync import Coroutine, send, recv
+
 from myredis.application.gateways.master import MasterGateway
 from myredis.domain.key import Key
 from myredis.domain.record import Record
@@ -51,12 +53,15 @@ class TCPMaster(MasterGateway):
 
         return built_records
 
-    def get_records(self) -> dict[Key, Record]:
-        self._master_conn.send(b"*2\r\n$7\r\nREPLICA\r\n$4\r\nSYNC\r\n")
+    def get_records(self) -> Coroutine[dict[Key, Record]]:
+        yield from send(
+            self._master_conn,
+            "*2\r\n$7\r\nREPLICA\r\n$4\r\nSYNC\r\n".encode("utf-8"),
+        )
 
         data = bytearray()
         while True:
-            data_part = self._master_conn.recv(4096)
+            data_part = yield from recv(self._master_conn, 4096)
 
             if not data_part:
                 raise ConnectionResetError

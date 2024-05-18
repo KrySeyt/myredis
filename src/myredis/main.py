@@ -8,6 +8,7 @@ from enum import StrEnum
 from typing import Any
 
 import myasync
+from myasync import Coroutine
 
 from myredis.application.echo import Echo
 from myredis.application.get import Get
@@ -83,33 +84,36 @@ def process_command(conn: socket.socket, command: list[Any], raw_cmd: bytes) -> 
         case ["PING"]:
             if role == Role.MASTER:
                 print("ping")
-                yield from send(conn, ping())
+                ping_response = yield from ping()
+                yield from send(conn, ping_response)
 
         case ["ECHO", str(value)]:
             if role == Role.MASTER:
-                yield from send(conn, echo(value))
+                echo_response = yield from echo(value)
+                yield from send(conn, echo_response)
 
         case ["SET", str(key), str(value) | int(value), "PX", int(expire)]:
             resend_to_replicas(raw_cmd)
-            response = set_(key, value, expire=expire)
+            response = yield from set_(key, value, expire=expire)
             if role == Role.MASTER:
                 yield from send(conn, response)
 
         case ["SET", str(key), str(value) | int(value)]:
             resend_to_replicas(raw_cmd)
-            response = set_(key, value)
+            response = yield from set_(key, value)
             if role == Role.MASTER:
                 yield from send(conn, response)
 
         case ["GET", str(key)]:
-            yield from send(conn, get(key))
+            get_response = yield from get(key)
+            yield from send(conn, get_response)
 
         case ["INFO", "REPLICATION"]:
             yield from send(conn, info())
 
         case ["REPLICA", "SYNC"]:
             if role == Role.MASTER:
-                d = sync_replica()
+                d = yield from sync_replica()
                 yield from send(conn, d)
                 replicas[conn] = 0
 
@@ -241,9 +245,9 @@ def full_resync() -> bytes:
     return f"+FULLRESYNC {replication_id} 0\r\n".encode()
 
 
-def sync_replica() -> bytes:
+def sync_replica() -> Coroutine[bytes]:
     interactor = SyncReplica(storage)
-    records = interactor()
+    records = yield from interactor()
     command = [f"SYNC%{len(records)}\r\n"]
     for key, record in records.items():
         command.append(
@@ -255,15 +259,15 @@ def sync_replica() -> bytes:
     return "".join(command).encode("utf-8")
 
 
-def ping() -> bytes:
+def ping() -> Coroutine[bytes]:
     interactor = Ping()
-    value = interactor()
+    value = yield from interactor()
     return f"+{value}\r\n".encode("utf-8")
 
 
-def set_(key: str, value: object, expire: int | None = None) -> bytes:
+def set_(key: str, value: object, expire: int | None = None) -> Coroutine[bytes]:
     interactor = Set(storage)
-    interactor(
+    yield from interactor(
         key,
         Record(
             value,
@@ -273,16 +277,16 @@ def set_(key: str, value: object, expire: int | None = None) -> bytes:
     return ok()
 
 
-def get(key: str) -> bytes:
+def get(key: str) -> Coroutine[bytes]:
     interactor = Get(storage)
-    record = interactor(key)
+    record = yield from interactor(key)
     value = record.value if record is not None else -1
     return f"+{value}\r\n".encode()
 
 
-def echo(input_str: str) -> bytes:
+def echo(input_str: str) -> Coroutine[bytes]:
     interactor = Echo()
-    value = interactor(input_str)
+    value = yield from interactor(input_str)
     return f"${len(value)}\r\n{value}\r\n".encode()
 
 
@@ -309,7 +313,7 @@ def start_server(domain: str, port: int) -> myasync.Coroutine[None]:
         myasync.create_task(commands_handler(conn))
 
 
-def connect_to_master(args) -> myasync.Coroutine[None]:
+def connect_to_master(args) -> Coroutine[None]:
     master_domain, master_port = args.replicaof
     master_port = int(master_port)
     master_conn = socket.create_connection((master_domain, master_port))
@@ -318,7 +322,7 @@ def connect_to_master(args) -> myasync.Coroutine[None]:
     yield from recv(master_conn, 1024)
 
     sync_interactor = SyncWithMaster(storage, TCPMaster(master_conn))
-    sync_interactor()
+    yield from sync_interactor()
 
     myasync.create_task(commands_handler(master_conn))
 
