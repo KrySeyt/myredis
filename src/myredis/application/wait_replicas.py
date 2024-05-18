@@ -1,10 +1,10 @@
 from myasync import Coroutine
 
-from myredis.application.gateways.replicas import Replicas
+from myredis.application.gateways.replicas import ReplicasManager
 
 
 class WaitReplicas:
-    def __init__(self, replicas: Replicas) -> None:
+    def __init__(self, replicas: ReplicasManager) -> None:
         self._replicas = replicas
 
     def __call__(self, replicas_count: int, timeout: float) -> Coroutine[int]:

@@ -6,7 +6,7 @@ from enum import StrEnum
 from typing import Any
 
 import myasync
-from myasync import Coroutine, recv, send, Event
+from myasync import Coroutine, Event, recv, send
 
 from myredis.application.add_replica import AddReplica
 from myredis.application.echo import Echo
@@ -19,7 +19,7 @@ from myredis.application.wait_replicas import WaitReplicas
 from myredis.domain.record import Record
 from myredis.external.ram_values_storage import RAMValuesStorage
 from myredis.external.tcp_master import TCPMaster
-from myredis.external.tcp_replicas import TCPReplicas
+from myredis.external.tcp_replicas import TCPReplica, TCPReplicasManager
 
 
 class Role(StrEnum):
@@ -27,7 +27,7 @@ class Role(StrEnum):
     SLAVE = "slave"
 
 
-conn_to_event = {}
+conn_to_event: dict[socket.socket, Event] = {}
 
 
 COMMANDS_TOKENS = {
@@ -164,7 +164,7 @@ def is_command(cmd: bytes) -> bool:
     return all((
             cmd,
             cmd.startswith(b"*"),
-            not cmd.startswith("SYNC".encode("utf-8"))
+            not cmd.startswith(b"SYNC"),
     ))
 
 
@@ -202,7 +202,7 @@ def config_get(key) -> bytes:
 
 
 def wait(replicas_count: int, timeout: int) -> myasync.Coroutine[bytes]:
-    wait_interactor = WaitReplicas(TCPReplicas())
+    wait_interactor = WaitReplicas(TCPReplicasManager())
     responded_replicas_count = yield from wait_interactor(replicas_count, timeout / 1000)
     return f":{responded_replicas_count}\r\n".encode()
 
@@ -223,8 +223,8 @@ def sync_replica(replica_conn: socket.socket) -> Coroutine[bytes]:
     event = conn_to_event[replica_conn]
     event.set()
 
-    add_replica_interactor = AddReplica(TCPReplicas())
-    yield from add_replica_interactor(replica_conn)
+    add_replica_interactor = AddReplica(TCPReplicasManager())
+    yield from add_replica_interactor(TCPReplica(replica_conn))
 
     sync_replica_interactor = SyncReplica(storage)
     records = yield from sync_replica_interactor()
@@ -233,7 +233,7 @@ def sync_replica(replica_conn: socket.socket) -> Coroutine[bytes]:
         command.append(
             f"+{key}\r\n"
             f"+{record.value}\r\n"
-            f":{record.expires if record.expires else -1}\r\n"
+            f":{record.expires if record.expires else -1}\r\n",
         )
 
     return "".join(command).encode("utf-8")
@@ -242,7 +242,7 @@ def sync_replica(replica_conn: socket.socket) -> Coroutine[bytes]:
 def ping() -> Coroutine[bytes]:
     interactor = Ping()
     value = yield from interactor()
-    return f"+{value}\r\n".encode("utf-8")
+    return f"+{value}\r\n".encode()
 
 
 def set_(key: str, value: object, expire: int | None = None) -> Coroutine[bytes]:
@@ -251,8 +251,8 @@ def set_(key: str, value: object, expire: int | None = None) -> Coroutine[bytes]
         key,
         Record(
             value,
-            time.time() + expire / 1000 if expire is not None else None
-        )
+            time.time() + expire / 1000 if expire is not None else None,
+        ),
     )
     return ok()
 

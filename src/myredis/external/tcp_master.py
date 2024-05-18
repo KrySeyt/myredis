@@ -1,9 +1,9 @@
 import socket
 from typing import Any
 
-from myasync import Coroutine, send, recv
+from myasync import Coroutine, recv, send
 
-from myredis.application.gateways.master import Master, MasterSentWrongData
+from myredis.application.gateways.master import Master, MasterSentWrongDataError
 from myredis.domain.key import Key
 from myredis.domain.record import Record
 
@@ -13,10 +13,10 @@ class TCPMaster(Master):
         self._master_conn = master_conn
 
     def is_records_valid(self, records: bytes) -> bool:
-        if len(records) > 5 and not records.startswith("SYNC%".encode("utf-8")):
+        if len(records) > 5 and not records.startswith(b"SYNC%"):
             return False
 
-        splitters = records.count("\r\n".encode("utf-8"))
+        splitters = records.count(b"\r\n")
 
         if splitters != (3 * self.get_records_count(records)) + 1:
             return False
@@ -24,13 +24,13 @@ class TCPMaster(Master):
         return True
 
     def get_records_count(self, records: bytes) -> int:
-        return int(records.split("\r\n".encode("utf-8"))[0][5:], 2)
+        return int(records.split(b"\r\n")[0][5:], 2)
 
     def parse_value(self, value: bytes) -> Any:
-        if value.startswith(":".encode("utf-8")):
+        if value.startswith(b":"):
             return int(value[1:])
 
-        if value.startswith("+".encode("utf-8")):
+        if value.startswith(b"+"):
             return value[1:].decode("utf-8")
 
         raise ValueError(value)
@@ -39,7 +39,7 @@ class TCPMaster(Master):
         assert self.is_records_valid(records)
 
         built_records = {}
-        records_data_iter = iter(records.split("\r\n".encode("utf-8"))[1:])
+        records_data_iter = iter(records.split(b"\r\n")[1:])
         for _ in range(self.get_records_count(records)):
             key = self.parse_value(next(records_data_iter))
             value = self.parse_value(next(records_data_iter))
@@ -52,7 +52,7 @@ class TCPMaster(Master):
     def get_records(self) -> Coroutine[dict[Key, Record]]:
         yield from send(
             self._master_conn,
-            "*2\r\n$7\r\nREPLICA\r\n$4\r\nSYNC\r\n".encode("utf-8"),
+            b"*2\r\n$7\r\nREPLICA\r\n$4\r\nSYNC\r\n",
         )
 
         data = bytearray()
@@ -64,26 +64,26 @@ class TCPMaster(Master):
 
             data += data_part
 
-            if len(data) > 5 and not data.startswith("SYNC%".encode("utf-8")):
-                raise MasterSentWrongData(data)
+            if len(data) > 5 and not data.startswith(b"SYNC%"):
+                raise MasterSentWrongDataError(data)
 
-            if "\r\n".encode("utf-8") not in data:
+            if b"\r\n" not in data:
                 continue
 
-            records_count = int(data.split("\r\n".encode("utf-8"))[0][5:], 2)
+            records_count = int(data.split(b"\r\n")[0][5:], 2)
 
-            splitters = data.count("\r\n".encode("utf-8"))
+            splitters = data.count(b"\r\n")
 
             if splitters == (3 * records_count) + 1:
                 break
 
             if splitters > (3 * records_count) + 1:
-                raise MasterSentWrongData(data)
+                raise MasterSentWrongDataError(data)
 
         return self.parse_records(data)
 
     def ping(self) -> Coroutine[str]:
-        yield from send(self._master_conn, "*1\r\n$4\r\nPING\r\n".encode("utf-8"))
+        yield from send(self._master_conn, b"*1\r\n$4\r\nPING\r\n")
 
         data = bytearray()
         while True:
@@ -94,11 +94,11 @@ class TCPMaster(Master):
 
             data += data_part
 
-            if data == "+PONG\r\n".encode("utf-8"):
+            if data == b"+PONG\r\n":
                 break
 
-            if not "+PONG\r\n".encode("utf-8").startswith(data):
-                raise MasterSentWrongData(data)
+            if not b"+PONG\r\n".startswith(data):
+                raise MasterSentWrongDataError(data)
 
         value = self.parse_value(data)
         assert isinstance(value, str)

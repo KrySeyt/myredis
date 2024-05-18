@@ -1,15 +1,12 @@
-import socket
 
 from myasync import Coroutine
 
-from myredis.application.gateways.replicas import Replicas
+from myredis.application.gateways.replicas import Replica, ReplicasManager
 
 
 class AddReplica:
-    def __init__(self, replicas: Replicas) -> None:
+    def __init__(self, replicas: ReplicasManager) -> None:
         self._replicas = replicas
 
-    # TODO: Replace socket with abstraction
-    # TODO: Better send file instead of Records
-    def __call__(self, replica_conn: socket.socket) -> Coroutine[None]:
-        yield from self._replicas.add_replica(replica_conn)
+    def __call__(self, replica: Replica) -> Coroutine[None]:
+        yield from self._replicas.add_replica(replica)

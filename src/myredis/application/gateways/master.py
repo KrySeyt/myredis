@@ -6,7 +6,7 @@ from myredis.domain.key import Key
 from myredis.domain.record import Record
 
 
-class MasterSentWrongData(ValueError):
+class MasterSentWrongDataError(ValueError):
     pass
 
 

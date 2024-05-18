@@ -1,37 +1,48 @@
 import socket
 import time
 
-from myasync import Coroutine, Event, send, recv, sleep, create_task
+from myasync import Coroutine, Event, create_task, recv, send, sleep
 
-from myredis.application.gateways.replicas import Replicas, ReplicaSentWrongData
+from myredis.application.gateways.replicas import Replica, ReplicaSentWrongDataError, ReplicasManager
 
-replicas: list[socket.socket] = []
+replicas: list[Replica] = []
 
 
-class TCPReplicas(Replicas):
+class TCPReplica(Replica):
+    def __init__(self, socket_: socket.socket) -> None:
+        self._socket = socket_
+
+    def send(self, bytes_: bytes) -> Coroutine[None]:
+        yield from send(self._socket, bytes_)
+
+    def recv(self, bytes_count: int) -> Coroutine[bytes]:
+        data = yield from recv(self._socket, bytes_count)
+        return data
+
+
+class TCPReplicasManager(ReplicasManager):
     def __init__(self) -> None:
         self._responded_replicas_count = 0
 
-    def wait_replica(self, replica_conn: socket.socket, is_timeout: Event) -> Coroutine[None]:
-        yield from send(
-            replica_conn,
-            "*3\r\n$8\r\nREPLCONF\r\n$6\r\nGETACK\r\n$1\r\n*\r\n".encode("utf-8"),
+    def wait_replica(self, replica: Replica, is_timeout: Event) -> Coroutine[None]:
+        yield from replica.send(
+            b"*3\r\n$8\r\nREPLCONF\r\n$6\r\nGETACK\r\n$1\r\n*\r\n",
         )
 
         data = bytearray()
         excepted_splitters_count = 7
         while not is_timeout:
-            data_part = yield from recv(replica_conn, 4096)
+            data_part = yield from replica.recv(4096)
 
             if not data_part:
                 raise ConnectionResetError
 
             data += data_part
 
-            splitters_count = data.count("\r\n".encode("utf-8"))
+            splitters_count = data.count(b"\r\n")
 
             if splitters_count > excepted_splitters_count:
-                raise ReplicaSentWrongData(data)
+                raise ReplicaSentWrongDataError(data)
 
             if splitters_count == excepted_splitters_count:
                 self._responded_replicas_count += 1
@@ -52,7 +63,7 @@ class TCPReplicas(Replicas):
         self._responded_replicas_count = 0
         return count
 
-    def add_replica(self, replica_conn: socket.socket) -> Coroutine[None]:
+    def add_replica(self, replica: Replica) -> Coroutine[None]:
         yield None
 
-        replicas.append(replica_conn)
+        replicas.append(replica)

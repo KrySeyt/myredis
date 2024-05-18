@@ -1,19 +1,27 @@
-import socket
 from abc import ABC, abstractmethod
 
 from myasync import Coroutine
 
 
-class ReplicaSentWrongData(ValueError):
+class ReplicaSentWrongDataError(ValueError):
     pass
 
 
-class Replicas(ABC):
+class Replica(ABC):
+    @abstractmethod
+    def send(self, bytes_: bytes) -> Coroutine[None]:
+        raise NotImplementedError
+
+    @abstractmethod
+    def recv(self, bytes_count: int) -> Coroutine[bytes]:
+        raise NotImplementedError
+
+
+class ReplicasManager(ABC):
     @abstractmethod
     def wait(self, replicas_count: int, timeout: float) -> Coroutine[int]:
         raise NotImplementedError
 
-    # TODO: Replace socket with abstraction
     @abstractmethod
-    def add_replica(self, replica_conn: socket.socket) -> Coroutine[None]:
+    def add_replica(self, replica: Replica) -> Coroutine[None]:
         raise NotImplementedError
