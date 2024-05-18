@@ -100,4 +100,6 @@ class TCPMaster(Master):
             if not "+PONG\r\n".encode("utf-8").startswith(data):
                 raise MasterSentWrongData(data)
 
-        return self.parse_value(data)
+        value = self.parse_value(data)
+        assert isinstance(value, str)
+        return value

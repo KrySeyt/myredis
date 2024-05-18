@@ -1,29 +1,33 @@
-import base64
 import re
 import socket
 import time
 from argparse import ArgumentParser
-from dataclasses import dataclass
 from enum import StrEnum
 from typing import Any
 
 import myasync
-from myasync import Coroutine
+from myasync import Coroutine, recv, send, Event
 
+from myredis.application.add_replica import AddReplica
 from myredis.application.echo import Echo
 from myredis.application.get import Get
 from myredis.application.ping import Ping
 from myredis.application.set import Set
 from myredis.application.sync_replica import SyncReplica
 from myredis.application.sync_with_master import SyncWithMaster
+from myredis.application.wait_replicas import WaitReplicas
 from myredis.domain.record import Record
 from myredis.external.ram_values_storage import RAMValuesStorage
 from myredis.external.tcp_master import TCPMaster
+from myredis.external.tcp_replicas import TCPReplicas
 
 
 class Role(StrEnum):
     MASTER = "master"
     SLAVE = "slave"
+
+
+conn_to_event = {}
 
 
 COMMANDS_TOKENS = {
@@ -35,14 +39,9 @@ COMMANDS_TOKENS = {
     "INFO",
     "REPLICATION",
     "REPLCONF",
-    # "LISTENING-PORT",
-    # "CAPA",
     "EOF",
-    # "PSYNC2",
-    # "PSYNC",
     "GETACK",
     "WAIT",
-    # "FULLRESYNC",
     "CONFIG",
     "REPLICA",
     "SYNC",
@@ -57,19 +56,7 @@ replication_offset = 0
 processed = 0
 replicas: dict[socket.socket, int] = {}
 
-z = 0
-
 storage: RAMValuesStorage = RAMValuesStorage()
-
-
-def send(conn: socket.socket, data: bytes) -> myasync.Coroutine[None]:
-    yield myasync.Await(conn, myasync.IOType.OUTPUT)
-    conn.send(data)
-
-
-def recv(conn: socket.socket, size: int) -> myasync.Coroutine[bytes]:
-    yield myasync.Await(conn, myasync.IOType.INPUT)
-    return conn.recv(size)
 
 
 def resend_to_replicas(command: bytes) -> myasync.Coroutine[None]:
@@ -113,7 +100,7 @@ def process_command(conn: socket.socket, command: list[Any], raw_cmd: bytes) -> 
 
         case ["REPLICA", "SYNC"]:
             if role == Role.MASTER:
-                d = yield from sync_replica()
+                d = yield from sync_replica(conn)
                 yield from send(conn, d)
                 replicas[conn] = 0
 
@@ -124,10 +111,6 @@ def process_command(conn: socket.socket, command: list[Any], raw_cmd: bytes) -> 
             if role == Role.MASTER:
                 v = yield from wait(replicas_count, timeout)
                 yield from send(conn, v)
-
-        case ["REPLCONF", "ACK", int(val)]:
-            global z
-            z += 1
 
         case ["CONFIG", "GET", str(key)]:
             if role == Role.MASTER:
@@ -140,9 +123,9 @@ def process_command(conn: socket.socket, command: list[Any], raw_cmd: bytes) -> 
     processed += len(raw_cmd)
 
 
-def commands_handler(conn: socket.socket) -> myasync.Coroutine[None]:
+def commands_handler(conn: socket.socket, event: Event) -> myasync.Coroutine[None]:
     cmd_buffer = bytearray()
-    while True:
+    while not event:
         yield myasync.Await(conn, myasync.IOType.INPUT)
 
         data = yield from recv(conn, 1024)
@@ -219,18 +202,9 @@ def config_get(key) -> bytes:
 
 
 def wait(replicas_count: int, timeout: int) -> myasync.Coroutine[bytes]:
-    global z
-    for repl in (repl for repl, i in replicas.items() if i == 1):
-        yield from send(repl, b"*3\r\n$8\r\nREPLCONF\r\n$6\r\nGETACK\r\n$1\r\n*\r\n")
-
-    start = time.time()
-    while (z + len([repl for repl, i in replicas.items() if i == 0]) < replicas_count) and ((time.time() - start) < timeout / 1000):
-        yield from myasync.sleep(0.001)
-
-    d = z + len([repl for repl, i in replicas.items() if i == 0])
-    z = 0
-
-    return f":{d}\r\n".encode()
+    wait_interactor = WaitReplicas(TCPReplicas())
+    responded_replicas_count = yield from wait_interactor(replicas_count, timeout / 1000)
+    return f":{responded_replicas_count}\r\n".encode()
 
 
 def ack() -> bytes:
@@ -245,9 +219,15 @@ def full_resync() -> bytes:
     return f"+FULLRESYNC {replication_id} 0\r\n".encode()
 
 
-def sync_replica() -> Coroutine[bytes]:
-    interactor = SyncReplica(storage)
-    records = yield from interactor()
+def sync_replica(replica_conn: socket.socket) -> Coroutine[bytes]:
+    event = conn_to_event[replica_conn]
+    event.set()
+
+    add_replica_interactor = AddReplica(TCPReplicas())
+    yield from add_replica_interactor(replica_conn)
+
+    sync_replica_interactor = SyncReplica(storage)
+    records = yield from sync_replica_interactor()
     command = [f"SYNC%{len(records)}\r\n"]
     for key, record in records.items():
         command.append(
@@ -310,7 +290,9 @@ def start_server(domain: str, port: int) -> myasync.Coroutine[None]:
 
     while True:
         conn, _ = yield from get_new_client(server)
-        myasync.create_task(commands_handler(conn))
+        event = Event()
+        myasync.create_task(commands_handler(conn, event))
+        conn_to_event[conn] = event
 
 
 def connect_to_master(args) -> Coroutine[None]:
@@ -324,7 +306,9 @@ def connect_to_master(args) -> Coroutine[None]:
     sync_interactor = SyncWithMaster(storage, TCPMaster(master_conn))
     yield from sync_interactor()
 
-    myasync.create_task(commands_handler(master_conn))
+    event = Event()
+    myasync.create_task(commands_handler(master_conn, event))
+    conn_to_event[master_conn] = event
 
 
 def main() -> myasync.Coroutine[None]:
