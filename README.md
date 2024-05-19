@@ -56,7 +56,7 @@ redis-cli ping
 ```
 
 ```shell
-redis-cli echo Hello
+redis-cli echo "Hello, World\!"
 ```
 
 ```shell
