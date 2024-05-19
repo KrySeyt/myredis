@@ -2,7 +2,7 @@ import socket
 from argparse import ArgumentParser
 
 import myasync
-from myasync import Coroutine, Event
+from myasync import Coroutine
 
 from myredis.adapters.controllers.ack import Ack
 from myredis.adapters.controllers.config_get import GetConfig
@@ -28,7 +28,6 @@ from myredis.external.config import Config
 from myredis.external.ram_values_storage import RAMValuesStorage
 from myredis.external.tcp_api.command_processor import CommandProcessor, Controllers
 from myredis.external.tcp_api.server import ServerConfig, TCPServer
-from myredis.external.tcp_api.temp import conn_to_stop_event
 from myredis.external.tcp_master import TCPMaster
 from myredis.external.tcp_replicas import TCPReplicasManager
 
@@ -43,9 +42,7 @@ def connect_to_master(server: TCPServer, master_domain: str, master_port: int) -
     sync_interactor = SyncWithMaster(RAMValuesStorage(), TCPMaster(master_conn))
     yield from sync_interactor()
 
-    stop = Event()
-    myasync.create_task(server.client_handler(master_conn, stop))
-    conn_to_stop_event[master_conn] = stop
+    myasync.create_task(server.client_handler(master_conn))
 
 
 def main() -> Coroutine[None]:

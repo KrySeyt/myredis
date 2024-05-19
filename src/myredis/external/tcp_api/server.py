@@ -4,11 +4,10 @@ from dataclasses import dataclass
 from typing import Any
 
 import myasync
-from myasync import Coroutine, Event, recv, send
+from myasync import Coroutine, recv, send
 
 from myredis.domain.config import AppConfig
 from myredis.external.tcp_api.command_processor import CommandProcessor
-from myredis.external.tcp_api.temp import conn_to_stop_event
 
 COMMANDS_TOKENS = {
     "PING",
@@ -51,13 +50,12 @@ class TCPServer:
 
         while True:
             conn, _ = yield from self.get_new_client(server)
-            event = Event()
-            myasync.create_task(self.client_handler(conn, event))
-            conn_to_stop_event[conn] = event
+            myasync.create_task(self.client_handler(conn))
 
-    def client_handler(self, conn: socket.socket, stop: Event) -> myasync.Coroutine[None]:
+    def client_handler(self, conn: socket.socket) -> myasync.Coroutine[None]:
         cmd_buffer = bytearray()
-        while not stop:
+        pooling = True
+        while pooling:
             data = yield from recv(conn, 1024)
 
             if not data:
@@ -80,8 +78,13 @@ class TCPServer:
                     parsed_command = self.parse_command(cmd)
                     print(f"{self._app_config.role}: Received command - {parsed_command}")
                     response = yield from self._command_processor.process_command(command=parsed_command, conn=conn)
+
                     if response is not None:
                         yield from send(conn, response)
+
+                    if parsed_command == ["REPLICA", "SYNC"]:
+                        pooling = False
+                        break
 
                 else:
                     print("Command is not full")

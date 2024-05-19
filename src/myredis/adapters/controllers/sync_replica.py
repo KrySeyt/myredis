@@ -1,12 +1,9 @@
-import socket
-
 from myasync import Coroutine
 
 from myredis.adapters import responses
 from myredis.application.add_replica import AddReplica as AddReplicaInteractor
+from myredis.application.gateways.replicas import Replica
 from myredis.application.sync_replica import SyncReplica as SyncReplicaInteractor
-from myredis.external.tcp_api.temp import conn_to_stop_event
-from myredis.external.tcp_replicas import TCPReplica
 
 
 class SyncReplica:
@@ -18,12 +15,8 @@ class SyncReplica:
         self._add_replica = add_replica_interactor
         self._sync_replica = sync_replica_interactor
 
-    # TODO: remove socket + fix temp solution with conn_to_stop_event
-    def __call__(self, replica_conn: socket.socket) -> Coroutine[bytes]:
-        event = conn_to_stop_event[replica_conn]
-        event.set()
-
-        yield from self._add_replica(TCPReplica(replica_conn))
+    def __call__(self, replica: Replica) -> Coroutine[bytes]:
+        yield from self._add_replica(replica)
 
         records = yield from self._sync_replica()
         return responses.records(records)

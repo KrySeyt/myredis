@@ -13,6 +13,7 @@ from myredis.adapters.controllers.set import Set
 from myredis.adapters.controllers.sync_replica import SyncReplica
 from myredis.adapters.controllers.wait import WaitReplicas
 from myredis.domain.config import AppConfig, Role
+from myredis.external.tcp_replicas import TCPReplica
 
 
 class WrongCommand(ValueError):
@@ -64,7 +65,7 @@ class CommandProcessor:
 
             case ["REPLICA", "SYNC"]:
                 if self._config.role == Role.MASTER:
-                    d = yield from self._controllers.sync_replica(conn)
+                    d = yield from self._controllers.sync_replica(TCPReplica(conn))
                     return d
 
             case ["REPLCONF", "GETACK"]:
