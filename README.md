@@ -37,5 +37,34 @@ python -m src.myredis
 python -m src.myredis --port 6379 --dir mydir --dbfilename dbfile
 ```
 
+# Supported commands
+
+```shell
+redis-cli set foo bar
+```
+
+```shell
+redis-cli set foo bar px 1000
+```
+
+```shell
+redis-cli wait 3 1000
+```
+
+```shell
+redis-cli ping
+```
+
+```shell
+redis-cli echo Hello
+```
+
+```shell
+redis-cli wait 3 1000
+```
+
+```shell
+redis-cli config get port
+```
 
 
