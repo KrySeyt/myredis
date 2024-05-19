@@ -1,7 +1,7 @@
 import socket
 import time
 
-from myredis.external import responses, commands
+from tests import responses, commands
 
 
 def test(client: socket.socket) -> None:
@@ -9,7 +9,7 @@ def test(client: socket.socket) -> None:
     assert client.recv(1024) == responses.ok()
 
     client.send(commands.get("foo"))
-    assert client.recv(1024) == responses.str_("5")
+    assert client.recv(1024) == responses.get("5")
 
 
 def test_expire_success(client: socket.socket) -> None:
@@ -19,7 +19,7 @@ def test_expire_success(client: socket.socket) -> None:
     time.sleep(1)
 
     client.send(commands.get("expire-success"))
-    assert client.recv(1024) == responses.str_("5")
+    assert client.recv(1024) == responses.get("5")
 
 
 def test_expire_fail(client: socket.socket) -> None:

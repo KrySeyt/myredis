@@ -2,6 +2,5 @@ from myasync import Coroutine
 
 
 class Ack:
-    def __call__(self) -> Coroutine[tuple[str, str]]:
+    def __call__(self) -> Coroutine[None]:
         yield None
-        return "REPLCONF", "ACK"

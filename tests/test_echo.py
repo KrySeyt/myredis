@@ -1,6 +1,6 @@
 import socket
 
-from myredis.external import responses, commands
+from tests import responses, commands
 
 
 def test(client: socket.socket) -> None:

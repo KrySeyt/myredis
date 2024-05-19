@@ -1,6 +1,6 @@
 import logging
 
-from myredis.external import responses, commands
+from tests import responses, commands
 from tests.client import create_client
 from tests.server import ServerManager
 

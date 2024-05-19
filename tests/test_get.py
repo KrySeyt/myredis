@@ -1,6 +1,6 @@
 import socket
 
-from myredis.external import responses, commands
+from tests import responses, commands
 
 
 def test_get(client: socket.socket) -> None:
@@ -8,4 +8,4 @@ def test_get(client: socket.socket) -> None:
     assert client.recv(1024) == responses.ok()
 
     client.send(commands.get("foo"))
-    assert client.recv(1024) == responses.str_("5")
+    assert client.recv(1024) == responses.get("5")

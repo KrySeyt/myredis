@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from typing import Any
 
 import myasync
-from myasync import Coroutine, Event, recv
+from myasync import Coroutine, Event, recv, send
 
 from myredis.domain.config import AppConfig
 from myredis.external.tcp_api.command_processor import CommandProcessor
@@ -33,9 +33,10 @@ class ServerConfig:
 
 
 class TCPServer:
-    def __init__(self, app_config: AppConfig, server_config: ServerConfig) -> None:
+    def __init__(self, command_processor: CommandProcessor, app_config: AppConfig, server_config: ServerConfig) -> None:
         self._app_config = app_config
         self._server_config = server_config
+        self._command_processor = command_processor
 
     def start(self) -> Coroutine[None]:
         try:
@@ -55,11 +56,8 @@ class TCPServer:
             conn_to_stop_event[conn] = event
 
     def client_handler(self, conn: socket.socket, stop: Event) -> myasync.Coroutine[None]:
-        cmd_processor = CommandProcessor(self._app_config)
         cmd_buffer = bytearray()
         while not stop:
-            yield myasync.Await(conn, myasync.IOType.INPUT)
-
             data = yield from recv(conn, 1024)
 
             if not data:
@@ -81,7 +79,9 @@ class TCPServer:
                 if self.is_full_command(cmd):
                     parsed_command = self.parse_command(cmd)
                     print(f"{self._app_config.role}: Received command - {parsed_command}")
-                    yield from cmd_processor.process_command(conn=conn, command=parsed_command)
+                    response = yield from self._command_processor.process_command(command=parsed_command, conn=conn)
+                    if response is not None:
+                        yield from send(conn, response)
 
                 else:
                     print("Command is not full")

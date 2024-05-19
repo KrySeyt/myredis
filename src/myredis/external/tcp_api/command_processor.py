@@ -1,73 +1,88 @@
 import socket
+from dataclasses import dataclass
 from typing import Any
 
 import myasync
-from myasync import send
 
+from myredis.adapters.controllers.ack import Ack
+from myredis.adapters.controllers.config_get import GetConfig
+from myredis.adapters.controllers.echo import Echo
+from myredis.adapters.controllers.get import Get
+from myredis.adapters.controllers.ping import Ping
+from myredis.adapters.controllers.set import Set
+from myredis.adapters.controllers.sync_replica import SyncReplica
+from myredis.adapters.controllers.wait import WaitReplicas
 from myredis.domain.config import AppConfig, Role
-from myredis.external.tcp_api.ack import ack
-from myredis.external.tcp_api.config_get import config_get
-from myredis.external.tcp_api.echo import echo
-from myredis.external.tcp_api.get import get
-from myredis.external.tcp_api.ping import ping
-from myredis.external.tcp_api.set import set_
-from myredis.external.tcp_api.sync_replica import sync_replica
-from myredis.external.tcp_api.wait import wait
 
 
 class WrongCommand(ValueError):
     pass
 
 
-class CommandProcessor:
-    def __init__(self, config: AppConfig) -> None:
-        self._config = config
+@dataclass
+class Controllers:
+    ping: Ping
+    echo: Echo
+    set_: Set
+    get: Get
+    sync_replica: SyncReplica
+    ack: Ack
+    wait: WaitReplicas
+    get_config: GetConfig
 
-    def process_command(self, conn: socket.socket, command: list[Any]) -> myasync.Coroutine[None]:
+
+class CommandProcessor:
+    def __init__(self, config: AppConfig, controllers: Controllers) -> None:
+        self._config = config
+        self._controllers = controllers
+
+    # TODO: remove socket
+    def process_command(self, command: list[Any], conn: socket.socket) -> myasync.Coroutine[bytes | None]:
         match command:
             case ["PING"]:
-                if self._config.role == Role.MASTER:
-                    ping_response = yield from ping()
-                    yield from send(conn, ping_response)
+                ping_response = yield from self._controllers.ping()
+                return ping_response
 
             case ["ECHO", str(value)]:
                 if self._config.role == Role.MASTER:
-                    echo_response = yield from echo(value)
-                    yield from send(conn, echo_response)
+                    echo_response = yield from self._controllers.echo(value)
+                    return echo_response
 
             case ["SET", str(key), str(value) | int(value), "PX", int(expire)]:
-                response = yield from set_(key, value, expire=expire)
+                response = yield from self._controllers.set_(key, value, expire=expire)
                 if self._config.role == Role.MASTER:
-                    yield from send(conn, response)
+                    return response
 
             case ["SET", str(key), str(value) | int(value)]:
-                response = yield from set_(key, value)
+                response = yield from self._controllers.set_(key, value)
                 if self._config.role == Role.MASTER:
-                    yield from send(conn, response)
+                    return response
 
             case ["GET", str(key)]:
-                get_response = yield from get(key)
-                yield from send(conn, get_response)
+                get_response = yield from self._controllers.get(key)
+                return get_response
 
             case ["REPLICA", "SYNC"]:
                 if self._config.role == Role.MASTER:
-                    d = yield from sync_replica(conn)
-                    yield from send(conn, d)
+                    d = yield from self._controllers.sync_replica(conn)
+                    return d
 
             case ["REPLCONF", "GETACK"]:
-                ack_response = yield from ack()
-                yield from send(conn, ack_response)
+                ack_response = yield from self._controllers.ack()
+                return ack_response
 
             case ["WAIT", int(replicas_count), int(timeout)]:
                 if self._config.role == Role.MASTER:
-                    v = yield from wait(replicas_count, timeout)
-                    yield from send(conn, v)
+                    v = yield from self._controllers.wait(replicas_count, timeout)
+                    return v
 
             case ["CONFIG", "GET", str(key)]:
                 if self._config.role == Role.MASTER:
-                    config_value = yield from config_get(key)
-                    yield from send(conn, config_value)
+                    config_value = yield from self._controllers.get_config(key)
+                    return config_value
 
             case _:
                 print(f"{self._config.role}: Unknown command - {command}")
-                yield from send(conn, b"+WRONGCOMMAND\r\n")
+                return b"+WRONGCOMMAND\r\n"
+
+        return None

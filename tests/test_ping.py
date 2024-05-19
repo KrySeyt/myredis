@@ -1,10 +1,10 @@
 import socket
 
-from myredis.external.commands import ping
-from myredis.external.responses import pong
+from tests import commands
+from tests import responses
 
 
 def test(client: socket.socket) -> None:
-    client.send(ping())
+    client.send(commands.ping())
 
-    assert client.recv(1024) == pong()
+    assert client.recv(1024) == responses.pong()

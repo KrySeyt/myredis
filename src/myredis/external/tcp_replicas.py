@@ -3,10 +3,10 @@ import time
 
 from myasync import Coroutine, Event, create_task, gather, recv, send, sleep
 
+from myredis.adapters import commands
 from myredis.application.gateways.replicas import Replica, ReplicaSentWrongDataError, ReplicasManager
 from myredis.domain.key import Key
 from myredis.domain.record import Record
-from myredis.external import commands
 
 replicas: list[Replica] = []
 
