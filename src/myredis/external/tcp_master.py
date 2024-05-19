@@ -87,16 +87,13 @@ class TCPMaster(Master):
         yield from send(self._master_conn, commands.ping())
 
         data = bytearray()
-        while True:
+        while data != responses.pong():
             data_part = yield from recv(self._master_conn, 4096)
 
             if not data_part:
                 raise ConnectionResetError
 
             data += data_part
-
-            if data == responses.pong():
-                break
 
             if not responses.pong().startswith(data):
                 raise MasterSentWrongDataError(data)
