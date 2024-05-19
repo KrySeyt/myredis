@@ -9,8 +9,7 @@ from myredis.domain.record import Record
 
 
 class RAMValuesStorage(ValuesStorage):
-    def __init__(self) -> None:
-        self._storage: dict[Key, Record] = {}
+    _storage: dict[Key, Record] = {}
 
     def set(self, key: Key, record: Record) -> Coroutine[None]:
         yield None

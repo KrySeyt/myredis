@@ -33,7 +33,7 @@ class TCPReplicasManager(ReplicasManager):
         )
 
         data = bytearray()
-        excepted_splitters_count = 7
+        excepted_splitters_count = 5
         while not is_timeout:
             data_part = yield from replica.recv(4096)
 
