@@ -4,7 +4,7 @@ from typing import Any
 import myasync
 from myasync import send
 
-from myredis.domain.config import Config, Role
+from myredis.domain.config import AppConfig, Role
 from myredis.external.tcp_api.ack import ack
 from myredis.external.tcp_api.config_get import config_get
 from myredis.external.tcp_api.echo import echo
@@ -20,10 +20,10 @@ class WrongCommand(ValueError):
 
 
 class CommandProcessor:
-    def __init__(self, config: Config) -> None:
+    def __init__(self, config: AppConfig) -> None:
         self._config = config
 
-    def process_command(self, conn: socket.socket, command: list[Any], args) -> myasync.Coroutine[None]:
+    def process_command(self, conn: socket.socket, command: list[Any]) -> myasync.Coroutine[None]:
         match command:
             case ["PING"]:
                 if self._config.role == Role.MASTER:
@@ -65,7 +65,8 @@ class CommandProcessor:
 
             case ["CONFIG", "GET", str(key)]:
                 if self._config.role == Role.MASTER:
-                    yield from send(conn, config_get(key, args))
+                    config_value = yield from config_get(key)
+                    yield from send(conn, config_value)
 
             case _:
                 print(f"{self._config.role}: Unknown command - {command}")

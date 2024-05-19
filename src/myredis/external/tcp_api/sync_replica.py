@@ -5,12 +5,12 @@ from myasync import Coroutine
 from myredis.application.add_replica import AddReplica
 from myredis.application.sync_replica import SyncReplica
 from myredis.external.ram_values_storage import RAMValuesStorage
-from myredis.external.tcp_api.conn_to_event import conn_to_event
+from myredis.external.tcp_api.temp import conn_to_stop_event
 from myredis.external.tcp_replicas import TCPReplica, TCPReplicasManager
 
 
 def sync_replica(replica_conn: socket.socket) -> Coroutine[bytes]:
-    event = conn_to_event[replica_conn]
+    event = conn_to_stop_event[replica_conn]
     event.set()
 
     add_replica_interactor = AddReplica(TCPReplicasManager())

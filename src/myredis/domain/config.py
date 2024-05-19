@@ -8,5 +8,5 @@ class Role(str, Enum):
 
 
 @dataclass
-class Config:
+class AppConfig:
     role: Role
