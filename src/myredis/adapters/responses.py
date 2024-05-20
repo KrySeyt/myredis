@@ -12,7 +12,7 @@ def get(value: Any) -> bytes:
         return f"+{value}\r\n".encode()
 
     if isinstance(value, int):
-        return f"+{value}\r\n".encode()
+        return f":{value}\r\n".encode()
 
     raise ValueError(value)
 

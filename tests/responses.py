@@ -10,13 +10,13 @@ def get(value: Any) -> bytes:
         return f"+{value}\r\n".encode("utf-8")
 
     if isinstance(value, int):
-        return f"+{value}\r\n".encode("utf-8")
+        return f":{value}\r\n".encode("utf-8")
 
     raise ValueError(value)
 
 
 def not_found() -> bytes:
-    return "+-1\r\n".encode("utf-8")
+    return ":-1\r\n".encode("utf-8")
 
 
 def pong() -> bytes:
