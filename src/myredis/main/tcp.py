@@ -12,6 +12,7 @@ from myredis.adapters.controllers.ping import Ping
 from myredis.adapters.controllers.set import Set
 from myredis.adapters.controllers.sync_replica import SyncReplica
 from myredis.adapters.controllers.wait import WaitReplicas
+from myredis.adapters.presenters import responses
 from myredis.application.ack import Ack as AckInteractor
 from myredis.application.add_replica import AddReplica as AddReplicaInteractor
 from myredis.application.echo import Echo as EchoInteractor
@@ -58,14 +59,18 @@ def main() -> Coroutine[None]:
             role=Role.SLAVE if args.replicaof else Role.MASTER,
         ),
         controllers=Controllers(
-            ping=Ping(PingInteractor()),
-            echo=Echo(EchoInteractor()),
-            set_=Set(SetInteractor(RAMValuesStorage(), TCPReplicasManager())),
-            get=Get(GetInteractor(RAMValuesStorage())),
-            sync_replica=SyncReplica(AddReplicaInteractor(TCPReplicasManager()), SyncReplicaInteractor(RAMValuesStorage())),
-            ack=Ack(AckInteractor()),
-            wait=WaitReplicas(WaitReplicasInteractor(TCPReplicasManager())),
-            get_config=GetConfig(GetConfigInteractor(Config(args.__dict__))),
+            ping=Ping(PingInteractor(), responses.pong),
+            echo=Echo(EchoInteractor(), responses.echo),
+            set_=Set(SetInteractor(RAMValuesStorage(), TCPReplicasManager()), responses.ok),
+            get=Get(GetInteractor(RAMValuesStorage()), responses.get),
+            sync_replica=SyncReplica(
+                AddReplicaInteractor(TCPReplicasManager()),
+                SyncReplicaInteractor(RAMValuesStorage()),
+                responses.records,
+            ),
+            ack=Ack(AckInteractor(), responses.ack),
+            wait=WaitReplicas(WaitReplicasInteractor(TCPReplicasManager()), responses.wait),
+            get_config=GetConfig(GetConfigInteractor(Config(args.__dict__)), responses.config_param),
         ),
     )
 

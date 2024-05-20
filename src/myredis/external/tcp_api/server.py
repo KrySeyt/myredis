@@ -106,13 +106,13 @@ class TCPServer:
         ))
 
     def is_full_command(self, cmd: bytes) -> bool:
-        if "\r\n".encode("utf-8") not in cmd:
+        if b"\r\n" not in cmd:
             return False
 
         commands_array_head = cmd.split(b"\r\n", maxsplit=1)
         elems_count = int(commands_array_head[0][1:])
 
-        command_pattern = rf"(\$\d+\r\n.+\r\n){'{' + str(elems_count) + '}'}".encode("utf-8")
+        command_pattern = rf"(\$\d+\r\n.+\r\n){'{' + str(elems_count) + '}'}".encode()
         command = cmd[len(commands_array_head) + 2:]
 
         return bool(re.match(command_pattern, command))

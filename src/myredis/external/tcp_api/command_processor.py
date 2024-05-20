@@ -22,14 +22,14 @@ class WrongCommand(ValueError):
 
 @dataclass
 class Controllers:
-    ping: Ping
-    echo: Echo
-    set_: Set
-    get: Get
-    sync_replica: SyncReplica
-    ack: Ack
-    wait: WaitReplicas
-    get_config: GetConfig
+    ping: Ping[bytes | None]
+    echo: Echo[bytes | None]
+    set_: Set[bytes | None]
+    get: Get[bytes | None]
+    sync_replica: SyncReplica[bytes | None]
+    ack: Ack[bytes | None]
+    wait: WaitReplicas[bytes | None]
+    get_config: GetConfig[bytes | None]
 
 
 class CommandProcessor:
@@ -37,7 +37,6 @@ class CommandProcessor:
         self._config = config
         self._controllers = controllers
 
-    # TODO: remove socket
     def process_command(self, command: list[Any], conn: socket.socket) -> myasync.Coroutine[bytes | None]:
         match command:
             case ["PING"]:

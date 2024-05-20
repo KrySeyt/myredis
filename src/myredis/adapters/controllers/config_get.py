@@ -1,28 +1,18 @@
+from collections.abc import Callable
+from typing import Any, Generic, TypeVar
+
 from myasync import Coroutine
 
-from myredis.adapters import responses
 from myredis.application.get_config import GetConfig as GetConfigInteractor
-from myredis.external.config import Config
+
+T_co = TypeVar("T_co", covariant=True)
 
 
-# Temp
-class ConfigVar:
-    config: Config | None = None
-
-    @classmethod
-    def set(cls, config: Config) -> None:
-        cls.config = config
-
-    @classmethod
-    def get(cls) -> Config:
-        assert cls.config is not None
-        return cls.config
-
-
-class GetConfig:
-    def __init__(self, interactor: GetConfigInteractor) -> None:
+class GetConfig(Generic[T_co]):
+    def __init__(self, interactor: GetConfigInteractor, presenter: Callable[[str, Any], T_co]) -> None:
         self._interactor = interactor
+        self._presenter = presenter
 
-    def __call__(self, key: str) -> Coroutine[bytes]:
+    def __call__(self, key: str) -> Coroutine[T_co]:
         val = yield from self._interactor(key)
-        return responses.config_param(key, val)
+        return self._presenter(key, val)
