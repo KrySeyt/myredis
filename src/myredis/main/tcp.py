@@ -4,30 +4,22 @@ from argparse import ArgumentParser
 import myasync
 from myasync import Coroutine
 
-from myredis.adapters.controllers.ack import Ack
-from myredis.adapters.controllers.config_get import GetConfig
-from myredis.adapters.controllers.echo import Echo
-from myredis.adapters.controllers.get import Get
-from myredis.adapters.controllers.ping import Ping
-from myredis.adapters.controllers.set import Set
-from myredis.adapters.controllers.sync_replica import SyncReplica
-from myredis.adapters.controllers.wait import WaitReplicas
+from myredis.adapters.controllers.command_processor import CommandProcessor, Interactors
 from myredis.adapters.presenters import responses
-from myredis.application.ack import Ack as AckInteractor
-from myredis.application.add_replica import AddReplica as AddReplicaInteractor
-from myredis.application.echo import Echo as EchoInteractor
+from myredis.application.ack import Ack
+from myredis.application.add_replica import AddReplica
+from myredis.application.echo import Echo
 from myredis.application.gateways.ping_master import PingMaster
-from myredis.application.get import Get as GetInteractor
-from myredis.application.get_config import GetConfig as GetConfigInteractor
-from myredis.application.ping import Ping as PingInteractor
-from myredis.application.set import Set as SetInteractor
-from myredis.application.sync_replica import SyncReplica as SyncReplicaInteractor
+from myredis.application.get import Get
+from myredis.application.get_config import GetConfig
+from myredis.application.ping import Ping
+from myredis.application.set import Set
+from myredis.application.sync_replica import SyncReplica
 from myredis.application.sync_with_master import SyncWithMaster
-from myredis.application.wait_replicas import WaitReplicas as WaitReplicasInteractor
+from myredis.application.wait_replicas import WaitReplicas
 from myredis.domain.config import AppConfig, Role
 from myredis.external.config import Config
 from myredis.external.ram_values_storage import RAMValuesStorage
-from myredis.external.tcp_api.command_processor import CommandProcessor, Controllers
 from myredis.external.tcp_api.server import ServerConfig, TCPServer
 from myredis.external.tcp_master import TCPMaster
 from myredis.external.tcp_replicas import TCPReplicasManager
@@ -40,7 +32,7 @@ def connect_to_master(server: TCPServer, master_domain: str, master_port: int) -
     ping_master_interactor = PingMaster(TCPMaster(master_conn))
     yield from ping_master_interactor()
 
-    sync_interactor = SyncWithMaster(RAMValuesStorage(), TCPMaster(master_conn))
+    sync_interactor = SyncWithMaster(RAMValuesStorage(), TCPMaster(master_conn), lambda: None)
     yield from sync_interactor()
 
     myasync.create_task(server.client_handler(master_conn))
@@ -58,19 +50,16 @@ def main() -> Coroutine[None]:
         config=AppConfig(
             role=Role.SLAVE if args.replicaof else Role.MASTER,
         ),
-        controllers=Controllers(
-            ping=Ping(PingInteractor(), responses.pong),
-            echo=Echo(EchoInteractor(), responses.echo),
-            set_=Set(SetInteractor(RAMValuesStorage(), TCPReplicasManager()), responses.ok),
-            get=Get(GetInteractor(RAMValuesStorage()), responses.get),
-            sync_replica=SyncReplica(
-                AddReplicaInteractor(TCPReplicasManager()),
-                SyncReplicaInteractor(RAMValuesStorage()),
-                responses.records,
-            ),
-            ack=Ack(AckInteractor(), responses.ack),
-            wait=WaitReplicas(WaitReplicasInteractor(TCPReplicasManager()), responses.wait),
-            get_config=GetConfig(GetConfigInteractor(Config(args.__dict__)), responses.config_param),
+        interactors=Interactors(
+            ping=Ping(responses.pong),
+            echo=Echo(responses.echo),
+            set_=Set(RAMValuesStorage(), TCPReplicasManager(), responses.ok),
+            get=Get(RAMValuesStorage(), responses.get),
+            add_replica=AddReplica(TCPReplicasManager(), lambda: None),
+            sync_replica=SyncReplica(RAMValuesStorage(), responses.records),
+            ack=Ack(responses.ack),
+            wait=WaitReplicas(TCPReplicasManager(), responses.wait),
+            get_config=GetConfig(Config(args.__dict__), responses.config_param),
         ),
     )
 

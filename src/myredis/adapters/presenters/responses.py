@@ -7,18 +7,23 @@ def ok() -> bytes:
     return b"+OK\r\n"
 
 
-def get(value: Any) -> bytes:
+def get(record: Record | None) -> bytes:
+    if not record:
+        return not_found()
+
+    value = record.value
+
     if isinstance(value, str):
         return f"+{value}\r\n".encode()
 
     if isinstance(value, int):
         return f":{value}\r\n".encode()
 
-    raise ValueError(value)
+    raise ValueError(record)
 
 
 def not_found() -> bytes:
-    return b"+-1\r\n"
+    return b":-1\r\n"
 
 
 def pong() -> bytes:

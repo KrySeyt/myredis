@@ -6,8 +6,8 @@ from typing import Any
 import myasync
 from myasync import Coroutine, recv, send
 
+from myredis.adapters.controllers.command_processor import CommandProcessor
 from myredis.domain.config import AppConfig
-from myredis.external.tcp_api.command_processor import CommandProcessor
 
 COMMANDS_TOKENS = {
     "PING",

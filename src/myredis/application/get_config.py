@@ -1,15 +1,19 @@
-from typing import Any
+from collections.abc import Callable
+from typing import Any, Generic, TypeVar
 
 from myasync import Coroutine
 
 from myredis.application.gateways.config import ConfigGateway
 from myredis.domain.key import Key
 
+T_co = TypeVar("T_co")
 
-class GetConfig:
-    def __init__(self, config: ConfigGateway) -> None:
+
+class GetConfig(Generic[T_co]):
+    def __init__(self, config: ConfigGateway, presenter: Callable[[str, Any], T_co]) -> None:
         self._config = config
+        self._presenter = presenter
 
-    def __call__(self, key: Key) -> Coroutine[Any]:
+    def __call__(self, key: Key) -> Coroutine[T_co]:
         config_value = yield from self._config.get(key)
-        return config_value
+        return self._presenter(key, config_value)
