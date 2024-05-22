@@ -1,5 +1,5 @@
 from collections.abc import Callable
-from typing import Any, Generic, TypeVar
+from typing import Generic, TypeVar
 
 from myasync import Coroutine
 

@@ -1,4 +1,3 @@
-import socket
 import time
 from dataclasses import dataclass
 from typing import Any
@@ -8,6 +7,7 @@ import myasync
 from myredis.application.ack import Ack
 from myredis.application.add_replica import AddReplica
 from myredis.application.echo import Echo
+from myredis.application.gateways.replicas import Replica
 from myredis.application.get import Get
 from myredis.application.get_config import GetConfig
 from myredis.application.ping import Ping
@@ -16,7 +16,6 @@ from myredis.application.sync_replica import SyncReplica
 from myredis.application.wait_replicas import WaitReplicas
 from myredis.domain.config import AppConfig, Role
 from myredis.domain.record import Record
-from myredis.external.tcp_replicas import TCPReplica
 
 
 class WrongCommand(ValueError):
@@ -41,7 +40,7 @@ class CommandProcessor:
         self._config = config
         self._interactors = interactors
 
-    def process_command(self, command: list[Any], conn: socket.socket) -> myasync.Coroutine[bytes | None]:
+    def process_command(self, command: list[Any], replica: Replica | None = None) -> myasync.Coroutine[bytes | None]:
         match command:
             case ["PING"]:
                 ping_response = yield from self._interactors.ping()
@@ -80,7 +79,8 @@ class CommandProcessor:
 
             case ["REPLICA", "SYNC"]:
                 if self._config.role == Role.MASTER:
-                    yield from self._interactors.add_replica(TCPReplica(conn))
+                    assert replica
+                    yield from self._interactors.add_replica(replica)
                     d = yield from self._interactors.sync_replica()
                     return d
 

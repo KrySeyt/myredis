@@ -8,6 +8,7 @@ from myasync import Coroutine, recv, send
 
 from myredis.adapters.controllers.command_processor import CommandProcessor
 from myredis.domain.config import AppConfig
+from myredis.external.tcp_replicas import TCPReplica
 
 COMMANDS_TOKENS = {
     "PING",
@@ -77,7 +78,10 @@ class TCPServer:
                 if self.is_full_command(cmd):
                     parsed_command = self.parse_command(cmd)
                     print(f"{self._app_config.role}: Received command - {parsed_command}")
-                    response = yield from self._command_processor.process_command(command=parsed_command, conn=conn)
+                    response = yield from self._command_processor.process_command(
+                        command=parsed_command,
+                        replica=TCPReplica(conn),
+                    )
 
                     if response is not None:
                         yield from send(conn, response)
