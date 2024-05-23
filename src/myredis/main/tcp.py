@@ -5,7 +5,7 @@ import myasync
 from myasync import Coroutine
 
 from myredis.adapters.controllers.command_processor import CommandProcessor, Interactors
-from myredis.adapters.presenters import responses
+from myredis.adapters.views import responses
 from myredis.application.ack import Ack
 from myredis.application.add_replica import AddReplica
 from myredis.application.echo import Echo

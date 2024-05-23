@@ -10,10 +10,10 @@ T_co = TypeVar("T_co")
 
 
 class GetConfig(Generic[T_co]):
-    def __init__(self, config: ConfigGateway, presenter: Callable[[str, Any], T_co]) -> None:
+    def __init__(self, config: ConfigGateway, view: Callable[[str, Any], T_co]) -> None:
         self._config = config
-        self._presenter = presenter
+        self._view = view
 
     def __call__(self, key: Key) -> Coroutine[T_co]:
         config_value = yield from self._config.get(key)
-        return self._presenter(key, config_value)
+        return self._view(key, config_value)

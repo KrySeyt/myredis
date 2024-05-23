@@ -46,9 +46,9 @@ def ack() -> bytes:
     return b"*2\r\n$8\r\nREPLCONF\r\n$3\r\nACK\r\n"
 
 
-def records(records: dict[str, Record]) -> bytes:
-    command = [f"SYNC%{len(records)}\r\n"]
-    for key, record in records.items():
+def records(records_: dict[str, Record]) -> bytes:
+    command = [f"SYNC%{len(records_)}\r\n"]
+    for key, record in records_.items():
         command.append(
             f"+{key}\r\n"
             f"+{record.value}\r\n"
