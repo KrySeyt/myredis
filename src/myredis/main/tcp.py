@@ -9,10 +9,10 @@ from myredis.adapters.views import responses
 from myredis.application.ack import Ack
 from myredis.application.add_replica import AddReplica
 from myredis.application.echo import Echo
-from myredis.application.gateways.ping_master import PingMaster
 from myredis.application.get import Get
 from myredis.application.get_config import GetConfig
 from myredis.application.ping import Ping
+from myredis.application.ping_master import PingMaster
 from myredis.application.set import Set
 from myredis.application.sync_replica import SyncReplica
 from myredis.application.sync_with_master import SyncWithMaster

@@ -2,7 +2,7 @@ from typing import Any
 
 from myasync import Coroutine
 
-from myredis.application.gateways.config import ConfigGateway
+from myredis.application.interfaces.config import ConfigGateway
 
 
 class Config(ConfigGateway):

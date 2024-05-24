@@ -7,9 +7,9 @@ import myasync
 from myredis.application.ack import Ack
 from myredis.application.add_replica import AddReplica
 from myredis.application.echo import Echo
-from myredis.application.gateways.replicas import Replica
 from myredis.application.get import Get
 from myredis.application.get_config import GetConfig
+from myredis.application.interfaces.replicas import Replica
 from myredis.application.ping import Ping
 from myredis.application.set import Set
 from myredis.application.sync_replica import SyncReplica

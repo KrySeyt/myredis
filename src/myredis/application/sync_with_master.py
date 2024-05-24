@@ -3,8 +3,8 @@ from typing import Generic, TypeVar
 
 from myasync import Coroutine
 
-from myredis.application.gateways.master import Master
-from myredis.application.gateways.values import ValuesStorage
+from myredis.application.interfaces.master import Master
+from myredis.application.interfaces.values import ValuesStorage
 
 T_co = TypeVar("T_co")
 

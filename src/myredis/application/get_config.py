@@ -3,7 +3,7 @@ from typing import Any, Generic, TypeVar
 
 from myasync import Coroutine
 
-from myredis.application.gateways.config import ConfigGateway
+from myredis.application.interfaces.config import ConfigGateway
 from myredis.domain.key import Key
 
 T_co = TypeVar("T_co")

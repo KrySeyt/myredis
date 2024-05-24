@@ -3,7 +3,7 @@ from typing import Generic, TypeVar
 
 from myasync import Coroutine
 
-from myredis.application.gateways.replicas import Replica, ReplicasManager
+from myredis.application.interfaces.replicas import Replica, ReplicasManager
 
 T_co = TypeVar("T_co")
 

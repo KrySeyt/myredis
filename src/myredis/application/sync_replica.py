@@ -3,7 +3,7 @@ from typing import Generic, TypeVar
 
 from myasync import Coroutine
 
-from myredis.application.gateways.values import ValuesStorage
+from myredis.application.interfaces.values import ValuesStorage
 from myredis.domain.record import Record
 
 T_co = TypeVar("T_co")
