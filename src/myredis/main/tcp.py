@@ -5,6 +5,7 @@ import myasync
 from myasync import Coroutine
 
 from myredis.adapters.controllers.command_processor import CommandProcessor, Interactors
+from myredis.adapters.controllers.sync_with_master import sync_with_master
 from myredis.adapters.views import responses
 from myredis.application.ack import Ack
 from myredis.application.add_replica import AddReplica
@@ -29,11 +30,10 @@ def connect_to_master(server: TCPServer, master_domain: str, master_port: int) -
     master_port = int(master_port)
     master_conn = socket.create_connection((master_domain, master_port))
 
-    ping_master_interactor = PingMaster(TCPMaster(master_conn))
-    yield from ping_master_interactor()
-
-    sync_interactor = SyncWithMaster(RAMValuesStorage(), TCPMaster(master_conn), lambda: None)
-    yield from sync_interactor()
+    yield from sync_with_master(
+        PingMaster(TCPMaster(master_conn)),
+        SyncWithMaster(RAMValuesStorage(), TCPMaster(master_conn), lambda: None),
+    )
 
     myasync.create_task(server.client_handler(master_conn))
 
