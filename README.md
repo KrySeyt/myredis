@@ -67,4 +67,8 @@ redis-cli wait 3 1000
 redis-cli config get port
 ```
 
+# Supported data types
+- String
+- Integer (server responses only)
+- Null (server responses only)
 

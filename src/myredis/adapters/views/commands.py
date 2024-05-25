@@ -42,23 +42,6 @@ def ping() -> bytes:
     )
 
 
-def echo(value: str) -> bytes:
-    return (
-        f"*2\r\n"
-        f"$4\r\nECHO\r\n"
-        f"${len(value)}\r\n{value}\r\n"
-    ).encode()
-
-
-def config_get(key: str) -> bytes:
-    return (
-        f"*3\r\n"
-        f"$6\r\nCONFIG\r\n"
-        f"$3\r\nGET\r\n"
-        f"${len(key)}\r\n{key}\r\n"
-    ).encode()
-
-
 def wait(replicas_count: int, expire: int) -> bytes:
     return (
         f"*3\r\n"

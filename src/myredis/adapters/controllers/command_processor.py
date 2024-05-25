@@ -52,7 +52,6 @@ class CommandProcessor:
                     return echo_response
 
             case ["SET", str(key), str(value) | int(value), "PX", int(expire)]:
-
                 response = yield from self._interactors.set_(
                     key,
                     Record(
