@@ -57,7 +57,6 @@ class CommandProcessor:
                     key,
                     Record(
                         value,
-                        str if isinstance(value, str) else int,
                         time.time() + expire / 1000,
                     ),
                 )
@@ -69,7 +68,6 @@ class CommandProcessor:
                     key,
                     Record(
                         value,
-                        str if isinstance(value, str) else int,
                     ),
                 )
                 if self._config.role == Role.MASTER:

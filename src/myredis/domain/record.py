@@ -12,7 +12,6 @@ class Record(Generic[T]):
     """
 
     _value: T
-    type_: type[T]
     expires: float | None = None
 
     @property

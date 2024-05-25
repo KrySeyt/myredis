@@ -1,5 +1,5 @@
 from collections.abc import Callable
-from typing import Any, Generic, TypeVar
+from typing import Generic, TypeVar
 
 from myasync import Coroutine
 
@@ -10,10 +10,14 @@ T_co = TypeVar("T_co")
 
 
 class GetConfig(Generic[T_co]):
-    def __init__(self, config: ConfigGateway, view: Callable[[str, Any], T_co]) -> None:
+    def __init__(self, config: ConfigGateway, view: Callable[[str, str | None], T_co]) -> None:
         self._config = config
         self._view = view
 
     def __call__(self, key: Key) -> Coroutine[T_co]:
         config_value = yield from self._config.get(key)
+
+        if config_value is not None:
+            config_value = str(config_value)
+
         return self._view(key, config_value)
