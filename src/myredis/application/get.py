@@ -1,5 +1,5 @@
 from collections.abc import Callable
-from typing import Generic, TypeVar
+from typing import Any, Generic, TypeVar
 
 from myasync import Coroutine
 
@@ -11,7 +11,7 @@ T_co = TypeVar("T_co")
 
 
 class Get(Generic[T_co]):
-    def __init__(self, values_storage: ValuesStorage, view: Callable[[Record | None], T_co]) -> None:
+    def __init__(self, values_storage: ValuesStorage, view: Callable[[Record[Any] | None], T_co]) -> None:
         self._values_storage = values_storage
         self._view = view
 

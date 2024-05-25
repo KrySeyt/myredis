@@ -36,7 +36,7 @@ class TCPMaster(Master):
 
         raise ValueError(value)
 
-    def parse_records(self, records: bytes) -> dict[Key, Record]:
+    def parse_records(self, records: bytes) -> dict[Key, Record[Any]]:
         assert self.is_records_valid(records)
 
         built_records = {}
@@ -50,7 +50,7 @@ class TCPMaster(Master):
 
         return built_records
 
-    def get_records(self) -> Coroutine[dict[Key, Record]]:
+    def get_records(self) -> Coroutine[dict[Key, Record[Any]]]:
         yield from send(
             self._master_conn,
             commands.replica_sync(),

@@ -7,7 +7,7 @@ def ok() -> bytes:
     return b"+OK\r\n"
 
 
-def get(record: Record | None) -> bytes:
+def get(record: Record[Any] | None) -> bytes:
     if not record:
         return not_found()
 
@@ -19,7 +19,10 @@ def get(record: Record | None) -> bytes:
     if isinstance(value, int):
         return f":{value}\r\n".encode()
 
-    raise ValueError(record)
+    if value is None:
+        return not_found()
+
+    raise ValueError(record, f"value: {value}")
 
 
 def not_found() -> bytes:
@@ -46,7 +49,7 @@ def ack() -> bytes:
     return b"*2\r\n$8\r\nREPLCONF\r\n$3\r\nACK\r\n"
 
 
-def records(records_: dict[str, Record]) -> bytes:
+def records(records_: dict[str, Record[Any]]) -> bytes:
     command = [f"SYNC%{len(records_)}\r\n"]
     for key, record in records_.items():
         command.append(

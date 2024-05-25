@@ -52,10 +52,12 @@ class CommandProcessor:
                     return echo_response
 
             case ["SET", str(key), str(value) | int(value), "PX", int(expire)]:
+
                 response = yield from self._interactors.set_(
                     key,
                     Record(
                         value,
+                        str if isinstance(value, str) else int,
                         time.time() + expire / 1000,
                     ),
                 )
@@ -67,7 +69,7 @@ class CommandProcessor:
                     key,
                     Record(
                         value,
-                        None,
+                        str if isinstance(value, str) else int,
                     ),
                 )
                 if self._config.role == Role.MASTER:

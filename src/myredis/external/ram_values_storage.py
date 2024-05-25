@@ -1,5 +1,5 @@
 import copy
-import time
+from typing import Any
 
 from myasync import Coroutine
 
@@ -9,19 +9,19 @@ from myredis.domain.record import Record
 
 
 class RAMValuesStorage(ValuesStorage):
-    _storage: dict[Key, Record] = {}
+    _storage: dict[Key, Record[Any]] = {}
 
-    def set(self, key: Key, record: Record) -> Coroutine[None]:
+    def set(self, key: Key, record: Record[Any]) -> Coroutine[None]:
         yield None
 
         self._storage[key] = record
 
-    def set_records(self, records: dict[Key, Record]) -> Coroutine[None]:
+    def set_records(self, records: dict[Key, Record[Any]]) -> Coroutine[None]:
         yield None
 
         self._storage = copy.deepcopy(records)
 
-    def get(self, key: Key) -> Coroutine[Record | None]:
+    def get(self, key: Key) -> Coroutine[Record[Any] | None]:
         yield None
 
         record = self._storage.get(key, None)
@@ -29,12 +29,9 @@ class RAMValuesStorage(ValuesStorage):
         if record is None:
             return None
 
-        if record.expires and record.expires < time.time():
-            return None
-
         return record
 
-    def get_all(self) -> Coroutine[dict[Key, Record]]:
+    def get_all(self) -> Coroutine[dict[Key, Record[Any]]]:
         yield None
 
         return copy.deepcopy(self._storage)

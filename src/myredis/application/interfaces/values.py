@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from typing import Any
 
 from myasync import Coroutine
 
@@ -8,17 +9,17 @@ from myredis.domain.record import Record
 
 class ValuesStorage(ABC):
     @abstractmethod
-    def set(self, key: Key, record: Record) -> Coroutine[None]:
+    def set(self, key: Key, record: Record[Any]) -> Coroutine[None]:
         raise NotImplementedError
 
     @abstractmethod
-    def set_records(self, records: dict[Key, Record]) -> Coroutine[None]:
+    def set_records(self, records: dict[Key, Record[Any]]) -> Coroutine[None]:
         raise NotImplementedError
 
     @abstractmethod
-    def get(self, key: Key) -> Coroutine[Record | None]:
+    def get(self, key: Key) -> Coroutine[Record[Any] | None]:
         raise NotImplementedError
 
     @abstractmethod
-    def get_all(self) -> Coroutine[dict[Key, Record]]:
+    def get_all(self) -> Coroutine[dict[Key, Record[Any]]]:
         raise NotImplementedError

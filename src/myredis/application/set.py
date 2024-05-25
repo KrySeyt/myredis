@@ -1,5 +1,5 @@
 from collections.abc import Callable
-from typing import Generic, TypeVar
+from typing import Any, Generic, TypeVar
 
 from myasync import Coroutine
 
@@ -17,7 +17,7 @@ class Set(Generic[T_co]):
         self._replicas = replicas
         self._view = view
 
-    def __call__(self, key: Key, record: Record) -> Coroutine[T_co]:
+    def __call__(self, key: Key, record: Record[Any]) -> Coroutine[T_co]:
         yield from self._values_storage.set(key, record)
         yield from self._replicas.set(key, record)
         return self._view()

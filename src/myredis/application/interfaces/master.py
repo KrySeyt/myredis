@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from typing import Any
 
 from myasync import Coroutine
 
@@ -12,7 +13,7 @@ class MasterSentWrongDataError(ValueError):
 
 class Master(ABC):
     @abstractmethod
-    def get_records(self) -> Coroutine[dict[Key, Record]]:
+    def get_records(self) -> Coroutine[dict[Key, Record[Any]]]:
         raise NotImplementedError
 
     @abstractmethod

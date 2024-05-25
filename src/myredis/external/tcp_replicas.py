@@ -1,5 +1,6 @@
 import socket
 import time
+from typing import Any
 
 from myasync import Coroutine, Event, create_task, gather, recv, send, sleep
 
@@ -71,6 +72,6 @@ class TCPReplicasManager(ReplicasManager):
 
         replicas.append(replica)
 
-    def set(self, key: Key, record: Record) -> Coroutine[None]:
+    def set(self, key: Key, record: Record[Any]) -> Coroutine[None]:
         cmd = commands.set_(key, record.value, int(record.expires * 1000) if record.expires else None)
         yield from gather(*(create_task(repl.send(cmd)) for repl in replicas))
