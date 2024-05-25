@@ -26,9 +26,6 @@ class RAMValuesStorage(ValuesStorage):
 
         record = self._storage.get(key, None)
 
-        if record is None:
-            return None
-
         return record
 
     def get_all(self) -> Coroutine[dict[Key, Record[Any]]]:
