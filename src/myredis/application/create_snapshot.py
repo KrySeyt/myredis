@@ -14,5 +14,5 @@ class CreateSnapshot(Generic[T]):
         self._snapshots = snapshots
 
     def __call__(self, name: str) -> Coroutine[None]:
-        records = yield from self._values_storage.get_all()
+        records = yield from self._values_storage.pop_new()
         yield from self._snapshots.create(name, records)

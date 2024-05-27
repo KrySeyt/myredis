@@ -21,5 +21,5 @@ class ValuesStorage(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def get_all(self) -> Coroutine[dict[Key, Record[Any]]]:
+    def pop_new(self) -> Coroutine[dict[Key, Record[Any]]]:
         raise NotImplementedError

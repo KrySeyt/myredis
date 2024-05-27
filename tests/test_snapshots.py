@@ -8,13 +8,11 @@ from tests.client import create_client
 from tests.server import ServerManager
 
 
-def test_snapshot_created(server_manager: ServerManager):
-    snapshot_dir = "."
-    snapshot_file = str(uuid.uuid4())
+def test_snapshot_loaded(server_manager):
+    snapshot_path = Path(".") / (str(uuid.uuid4()) + ".csv")
 
     server = server_manager.start_server(
-        dir=snapshot_dir,
-        dbfilename=snapshot_file,
+        dbfilename=snapshot_path,
         snapshotsinterval=1,
     )
 
@@ -26,37 +24,11 @@ def test_snapshot_created(server_manager: ServerManager):
 
     time.sleep(2)
 
-    file_path = Path(snapshot_dir) / snapshot_file
-
-    with open(file_path, "r") as file:
-        result = file.read() == json.dumps({
-            "test": {
-                "_value": test_value,
-                "expires": None
-            }
-        })
-
-    file_path.unlink(missing_ok=False)
-    assert result
-
-
-def test_snapshot_loaded(server_manager):
-    test_value = str(uuid.uuid4())
-    snapshot_path = Path(str(uuid.uuid4()))
-
-    with open(snapshot_path, "w") as file:
-        json.dump(
-            {
-                "test": {
-                    "_value": test_value,
-                    "expires": None,
-                }
-            },
-            file,
-        )
+    server_manager.kill_server(server.process.pid)
 
     server = server_manager.start_server(
-        dbfilename=str(snapshot_path),
+        dbfilename=snapshot_path,
+        snapshotsinterval=1,
     )
 
     client = create_client(server.domain, server.port)

@@ -15,5 +15,5 @@ class SyncReplica(Generic[T]):
         self._view = view
 
     def __call__(self) -> Coroutine[T]:  # TODO: Better send file instead of Records
-        records = yield from self._values_storage.get_all()
+        records = yield from self._values_storage.pop_new()
         return self._view(records)

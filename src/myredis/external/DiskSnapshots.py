@@ -1,5 +1,5 @@
-import json
-from dataclasses import asdict
+import csv
+import os.path
 from typing import Any
 
 from myasync import Coroutine
@@ -10,24 +10,34 @@ from myredis.domain.record import Record
 
 
 class DiskSnapshots(Snapshots):
-    def create(self, name: str, records: dict[Key, Record[Any]]) -> Coroutine[None]:
+    def create(self, snapshot_path: str, records: dict[Key, Record[Any]]) -> Coroutine[None]:
         yield None
 
-        data = {}
-        for key, record in records.items():
-            data[key] = asdict(record)
+        file_exists = os.path.exists(snapshot_path)
 
-        with open(name, "w") as file:
-            file.write(json.dumps(data))
+        with open(snapshot_path, "a") as file:
+            writer = csv.DictWriter(file, ["key", "value", "expires"])
 
-    def read(self, name: str) -> Coroutine[dict[Key, Record[Any]]]:
+            if not file_exists:
+                writer.writeheader()
+
+            for key, record in records.items():
+                writer.writerow({
+                    "key": key,
+                    "value": record.value,
+                    "expires": record.expires,
+                })
+
+    def read(self, snapshot_path: str) -> Coroutine[dict[Key, Record[Any]]]:
         yield None
 
-        with open(name, "rb") as file:
-            records_data = json.load(file)
-
-        records = {}
-        for key, record_data in records_data.items():
-            records[key] = Record(**record_data)
+        records: dict[Key, Record[Any]] = {}
+        with open(snapshot_path) as file:
+            reader = csv.DictReader(file)
+            for row in reader:
+                records[row["key"]] = Record(
+                    row["value"],
+                    float(row["expires"]) if row["expires"] else None,
+                )
 
         return records

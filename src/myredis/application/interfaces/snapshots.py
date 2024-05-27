@@ -9,9 +9,9 @@ from myredis.domain.record import Record
 
 class Snapshots(ABC):
     @abstractmethod
-    def create(self, name: str, records: dict[Key, Record[Any]]) -> Coroutine[None]:
+    def create(self, snapshot_path: str, records: dict[Key, Record[Any]]) -> Coroutine[None]:
         raise NotImplementedError
 
     @abstractmethod
-    def read(self, name: str) -> Coroutine[dict[Key, Record[Any]]]:
+    def read(self, snapshot_path: str) -> Coroutine[dict[Key, Record[Any]]]:
         raise NotImplementedError
