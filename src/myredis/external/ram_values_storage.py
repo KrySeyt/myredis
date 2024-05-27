@@ -19,13 +19,12 @@ class RAMValuesStorage(ValuesStorage):
     def set_records(self, records: dict[Key, Record[Any]]) -> Coroutine[None]:
         yield None
 
-        self._storage = copy.deepcopy(records)
+        type(self)._storage = copy.deepcopy(records)
 
     def get(self, key: Key) -> Coroutine[Record[Any] | None]:
         yield None
 
         record = self._storage.get(key, None)
-
         return record
 
     def get_all(self) -> Coroutine[dict[Key, Record[Any]]]:

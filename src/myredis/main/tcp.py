@@ -1,5 +1,7 @@
+import os.path
 import socket
 from argparse import ArgumentParser
+from pathlib import Path
 
 import myasync
 from myasync import Coroutine
@@ -9,9 +11,11 @@ from myredis.adapters.controllers.sync_with_master import sync_with_master
 from myredis.adapters.views import responses
 from myredis.application.ack import Ack
 from myredis.application.add_replica import AddReplica
+from myredis.application.create_snapshot import CreateSnapshot
 from myredis.application.echo import Echo
 from myredis.application.get import Get
 from myredis.application.get_config import GetConfig
+from myredis.application.load_snapshot import LoadSnapshot
 from myredis.application.ping import Ping
 from myredis.application.ping_master import PingMaster
 from myredis.application.set import Set
@@ -20,10 +24,12 @@ from myredis.application.sync_with_master import SyncWithMaster
 from myredis.application.wait_replicas import WaitReplicas
 from myredis.domain.config import AppConfig, Role
 from myredis.external.config import Config
+from myredis.external.DiskSnapshots import DiskSnapshots
 from myredis.external.ram_values_storage import RAMValuesStorage
 from myredis.external.tcp_api.server import ServerConfig, TCPServer
 from myredis.external.tcp_master import TCPMaster
 from myredis.external.tcp_replicas import TCPReplicasManager
+from myredis.main.snapshots import create_snapshot_worker
 
 
 def connect_to_master(server: TCPServer, master_domain: str, master_port: int) -> Coroutine[None]:
@@ -38,12 +44,17 @@ def connect_to_master(server: TCPServer, master_domain: str, master_port: int) -
     myasync.create_task(server.client_handler(master_conn))
 
 
+def load_snapshot(snapshot_path: str) -> Coroutine[None]:
+    yield from LoadSnapshot(RAMValuesStorage(), DiskSnapshots())(snapshot_path)
+
+
 def main() -> Coroutine[None]:
     arg_parser = ArgumentParser(description="MyRedis")
     arg_parser.add_argument("--port", default=6379, type=int)
     arg_parser.add_argument("--replicaof", nargs=2, type=str)
-    arg_parser.add_argument("--dir", type=str)
-    arg_parser.add_argument("--dbfilename", type=str)
+    arg_parser.add_argument("--dir", type=str, default=".")
+    arg_parser.add_argument("--dbfilename", type=str, default="snapshot")
+    arg_parser.add_argument("--snapshotsinterval", type=int, default=300)
     args = arg_parser.parse_args()
 
     cmd_processor = CommandProcessor(
@@ -73,8 +84,23 @@ def main() -> Coroutine[None]:
             role=Role.SLAVE if args.replicaof else Role.MASTER,
         ),
     )
+    if args.replicaof is None:
+        snapshot_path = Path(args.dir) / args.dbfilename
 
-    if args.replicaof is not None:
+        if os.path.isfile(snapshot_path):
+            yield from load_snapshot(str(snapshot_path))
+
+        myasync.create_task(
+            create_snapshot_worker(
+                str(snapshot_path),
+                args.snapshotsinterval,
+                CreateSnapshot(
+                    RAMValuesStorage(),
+                    DiskSnapshots(),
+                ),
+            ),
+        )
+    else:
         yield from connect_to_master(server, args.replicaof[0], int(args.replicaof[1]))
 
     yield from server.start()
