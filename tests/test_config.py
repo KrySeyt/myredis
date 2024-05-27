@@ -41,3 +41,21 @@ def test_dir_default(server_manager: ServerManager) -> None:
     client.send(commands.config_get("dir"))
 
     assert client.recv(1024) == responses.config_param("dir", ".")
+
+
+def test_snapshots_interval_success(server_manager: ServerManager) -> None:
+    server = server_manager.start_server(snapshotsinterval=500)
+    client = create_client(server.domain, server.port)
+
+    client.send(commands.config_get("snapshotsinterval"))
+
+    assert client.recv(1024) == responses.config_param("snapshotsinterval", "500")
+
+
+def test_snapshot_interval_default(server_manager: ServerManager) -> None:
+    server = server_manager.start_server()
+    client = create_client(server.domain, server.port)
+
+    client.send(commands.config_get("snapshotsinterval"))
+
+    assert client.recv(1024) == responses.config_param("snapshotsinterval", "300")

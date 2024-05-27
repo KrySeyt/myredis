@@ -31,8 +31,8 @@ python -m src.myredis
 - `--port <port:int>` - Optional. Server port. Default - `6379`
 - `--dir <dirname:str>` - Optional. DB files dir.
 - `--dbfilename <filename:str>` - Optional. DB filename.
-- `--replicaof <master-domain:str> <master-port:int>` - Optional. Start server as replica of master
 - `--snapshotsinterval <seconds:int>` - Optional. Interval between snapshot updates. Default - 300 secs (5 mins)
+- `--replicaof <master-domain:str> <master-port:int>` - Optional. Start server as replica of master
 
 ```shell
 python -m src.myredis --port 6379 --dir mydir --dbfilename dbfile
