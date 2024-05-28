@@ -5,6 +5,10 @@ from typing import Generic, TypeVar
 T = TypeVar("T")
 
 
+class Expired:
+    pass
+
+
 @dataclass(frozen=True)
 class Record(Generic[T]):
     """
@@ -15,8 +19,14 @@ class Record(Generic[T]):
     expires: float | None = None
 
     @property
-    def value(self) -> object:
-        if self.expires is not None and self.expires < time.time():
-            return None
+    def value(self) -> T | Expired:
+        if self.is_expired():
+            return Expired()
 
         return self._value
+
+    def is_expired(self) -> bool:
+        if self.expires is not None and self.expires < time.time():
+            return True
+
+        return False

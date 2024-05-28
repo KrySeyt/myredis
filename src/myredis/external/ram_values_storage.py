@@ -1,4 +1,3 @@
-import copy
 from typing import Any
 
 from myasync import Coroutine

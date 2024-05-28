@@ -3,7 +3,7 @@ from typing import Any
 from myredis.adapters.views.serializers import array_, bulk_str, int_, none, str_
 from myredis.adapters.views.serializers import record as record_serializer
 from myredis.adapters.views.serializers import records as records_serializer
-from myredis.domain.record import Record
+from myredis.domain.record import Expired, Record
 
 
 def ok() -> bytes:
@@ -22,7 +22,7 @@ def get(record: Record[Any] | None) -> bytes:
     if isinstance(value, int):
         return int_(value)
 
-    if value is None:
+    if isinstance(value, Expired):
         return not_found()
 
     raise ValueError(record, f"value: {value}")

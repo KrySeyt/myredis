@@ -22,6 +22,9 @@ class DiskSnapshots(Snapshots):
                 writer.writeheader()
 
             for key, record in records.items():
+                if record.is_expired():
+                    continue
+
                 writer.writerow({
                     "key": key,
                     "value": record.value,
@@ -35,9 +38,15 @@ class DiskSnapshots(Snapshots):
         with open(snapshot_path) as file:
             reader = csv.DictReader(file)
             for row in reader:
-                records[row["key"]] = Record(
+                expires = row["expires"]
+                record = Record(
                     row["value"],
-                    float(row["expires"]) if row["expires"] else None,
+                    float(expires) if expires else None,
                 )
+
+                if record.is_expired():
+                    continue
+
+                records[row["key"]] = record
 
         return records
