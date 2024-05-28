@@ -19,10 +19,10 @@ class RAMValuesStorage(ValuesStorage):
         new[key] = record
 
     def set_records(self, records: dict[Key, Record[Any]]) -> Coroutine[None]:
-        global storage
         yield None
 
-        storage = copy.deepcopy(records)
+        storage.clear()
+        storage.update(records)
 
     def get(self, key: Key) -> Coroutine[Record[Any] | None]:
         yield None
@@ -31,8 +31,9 @@ class RAMValuesStorage(ValuesStorage):
         return record
 
     def pop_new(self) -> Coroutine[dict[Key, Record[Any]]]:
+        global new
         yield None
 
-        new_records = copy.deepcopy(new)
-        new.clear()
+        new_records = new
+        new = {}
         return new_records
