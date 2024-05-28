@@ -6,29 +6,18 @@ from pathlib import Path
 import myasync
 from myasync import Coroutine
 
-from myredis.adapters.controllers.command_processor import CommandProcessor, Interactors
 from myredis.adapters.controllers.sync_with_master import sync_with_master
-from myredis.adapters.views import responses
-from myredis.application.ack import Ack
-from myredis.application.add_replica import AddReplica
 from myredis.application.create_snapshot import CreateSnapshot
-from myredis.application.echo import Echo
-from myredis.application.get import Get
-from myredis.application.get_config import GetConfig
 from myredis.application.load_snapshot import LoadSnapshot
-from myredis.application.ping import Ping
 from myredis.application.ping_master import PingMaster
-from myredis.application.set import Set
-from myredis.application.sync_replica import SyncReplica
 from myredis.application.sync_with_master import SyncWithMaster
-from myredis.application.wait_replicas import WaitReplicas
 from myredis.domain.config import AppConfig, Role
 from myredis.external.config import Config
-from myredis.external.DiskSnapshots import DiskSnapshots
+from myredis.external.disk_snapshots import DiskSnapshots
 from myredis.external.ram_values_storage import RAMValuesStorage
 from myredis.external.tcp_api.server import ServerConfig, TCPServer
 from myredis.external.tcp_master import TCPMaster
-from myredis.external.tcp_replicas import TCPReplicasManager
+from myredis.main.command_processor_factory import DefaultCommandProcessorFactory
 from myredis.main.snapshots import create_snapshot_worker
 
 
@@ -57,25 +46,11 @@ def main() -> Coroutine[None]:
     arg_parser.add_argument("--snapshotsinterval", type=int, default=300)
     args = arg_parser.parse_args()
 
-    cmd_processor = CommandProcessor(
-        config=AppConfig(
-            role=Role.SLAVE if args.replicaof else Role.MASTER,
-        ),
-        interactors=Interactors(
-            ping=Ping(responses.pong),
-            echo=Echo(responses.echo),
-            set_=Set(RAMValuesStorage(), TCPReplicasManager(), responses.ok),
-            get=Get(RAMValuesStorage(), responses.get),
-            add_replica=AddReplica(TCPReplicasManager(), lambda: None),
-            sync_replica=SyncReplica(RAMValuesStorage(), responses.records),
-            ack=Ack(responses.ack),
-            wait=WaitReplicas(TCPReplicasManager(), responses.wait),
-            get_config=GetConfig(Config(args.__dict__), responses.config_param),
-        ),
-    )
+    config = Config(args.__dict__)
+    cmd_processor_factory = DefaultCommandProcessorFactory(bool(args.replicaof), config)
 
     server = TCPServer(
-        command_processor=cmd_processor,
+        command_processor_factory=cmd_processor_factory,
         server_config=ServerConfig(
             domain="localhost",
             port=args.port,

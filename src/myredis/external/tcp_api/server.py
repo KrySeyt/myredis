@@ -6,7 +6,7 @@ from typing import Any
 import myasync
 from myasync import Coroutine, recv, send
 
-from myredis.adapters.controllers.command_processor import CommandProcessor
+from myredis.adapters.controllers.command_processor import CommandProcessorFactory
 from myredis.domain.config import AppConfig
 from myredis.external.tcp_replicas import TCPReplica
 
@@ -33,10 +33,15 @@ class ServerConfig:
 
 
 class TCPServer:
-    def __init__(self, command_processor: CommandProcessor, app_config: AppConfig, server_config: ServerConfig) -> None:
+    def __init__(
+            self,
+            command_processor_factory: CommandProcessorFactory,
+            app_config: AppConfig,
+            server_config: ServerConfig,
+    ) -> None:
         self._app_config = app_config
         self._server_config = server_config
-        self._command_processor = command_processor
+        self._command_processor_factory = command_processor_factory
 
     def start(self) -> Coroutine[None]:
         try:
@@ -54,6 +59,7 @@ class TCPServer:
             myasync.create_task(self.client_handler(conn))
 
     def client_handler(self, conn: socket.socket) -> myasync.Coroutine[None]:
+        command_processor = yield from self._command_processor_factory.create_command_processor()
         cmd_buffer = bytearray()
         pooling = True
         while pooling:
@@ -78,7 +84,7 @@ class TCPServer:
                 if self.is_full_command(cmd):
                     parsed_command = self.parse_command(cmd)
                     print(f"{self._app_config.role}: Received command - {parsed_command}")
-                    response = yield from self._command_processor.process_command(
+                    response = yield from command_processor.process_command(
                         command=parsed_command,
                         replica=TCPReplica(conn),
                     )

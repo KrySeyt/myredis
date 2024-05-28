@@ -1,5 +1,6 @@
 # MyRedis
-My simple Redis powered by [myasync](https://github.com/KrySeyt/myasync). RESP2 compatible. Supports `redis-cli`
+My simple Redis powered by [myasync](https://github.com/KrySeyt/myasync). RESP2 compatible. Supports `redis-cli`. 
+Append-only snapshots implemented
 
 # Setup
 - Copy repo

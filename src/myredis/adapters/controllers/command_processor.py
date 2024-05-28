@@ -1,8 +1,10 @@
 import time
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Any
 
 import myasync
+from myasync import Coroutine
 
 from myredis.application.ack import Ack
 from myredis.application.add_replica import AddReplica
@@ -102,3 +104,9 @@ class CommandProcessor:
                 return b"+WRONGCOMMAND\r\n"
 
         return None
+
+
+class CommandProcessorFactory(ABC):
+    @abstractmethod
+    def create_command_processor(self) -> Coroutine[CommandProcessor]:
+        raise NotImplementedError
