@@ -13,5 +13,5 @@ def create_snapshot_worker(
 ) -> Coroutine[None]:
     while True:
         yield from myasync.sleep(interval)
-        yield from create_snapshot(snapshot_path)
+        yield from myasync.run_in_thread(create_snapshot(snapshot_path))
         print(f"Snapshot created: {snapshot_path}")
