@@ -11,8 +11,6 @@ from myredis.application.create_snapshot import CreateSnapshot
 from myredis.application.load_snapshot import LoadSnapshot
 from myredis.application.ping_master import PingMaster
 from myredis.application.sync_with_master import SyncWithMaster
-from myredis.domain.config import AppConfig, Role
-from myredis.external.config import Config
 from myredis.external.disk_snapshots import DiskSnapshots
 from myredis.external.ram_values_storage import RAMValuesStorage
 from myredis.external.tcp_api.server import ServerConfig, TCPServer
@@ -46,19 +44,20 @@ def main() -> Coroutine[None]:
     arg_parser.add_argument("--snapshotsinterval", type=int, default=300)
     args = arg_parser.parse_args()
 
-    config = Config(args.__dict__)
-    cmd_processor_factory = DefaultCommandProcessorFactory(bool(args.replicaof), config)
+    cmd_processor_factory = DefaultCommandProcessorFactory(args.__dict__)
 
     server = TCPServer(
-        command_processor_factory=cmd_processor_factory,
+        command_processor_factory=cmd_processor_factory.create_replica_command_processor
+        if args.replicaof
+        else
+        cmd_processor_factory.create_master_command_processor,
+
         server_config=ServerConfig(
             domain="localhost",
             port=args.port,
         ),
-        app_config=AppConfig(
-            role=Role.SLAVE if args.replicaof else Role.MASTER,
-        ),
     )
+
     if args.replicaof is None:
         snapshot_path = Path(args.dir) / args.dbfilename
 
