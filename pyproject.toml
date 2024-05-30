@@ -45,6 +45,8 @@ lint.ignore = [
     "FBT001",
     "G004",
     "PTH123",
+    "TRY400",
+    "PLR1722",
 ]
 
 [tool.ruff.lint.per-file-ignores]

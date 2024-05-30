@@ -1,3 +1,4 @@
+import logging
 import time
 from abc import ABC, abstractmethod
 from typing import Any
@@ -18,13 +19,19 @@ from myredis.application.wait_replicas import WaitReplicas
 from myredis.domain.key import Key
 from myredis.domain.record import Record
 
+logger = logging.getLogger(__name__)
+
 
 class WrongCommandError(ValueError):
     pass
 
 
 class BaseCommandProcessor:
-    def process_command(self, command: list[Any], replica: Replica | None = None) -> myasync.Coroutine[bytes | None]:
+    def process_command(  # noqa: PLR0911
+            self,
+            command: list[Any],
+            replica: Replica | None = None,
+    ) -> myasync.Coroutine[bytes | None]:
         match command:
             case ["PING"]:
                 response = yield from self.ping()
@@ -64,7 +71,7 @@ class BaseCommandProcessor:
                 return response
 
             case _:
-                print(f"Unknown command - {command}")
+                logger.error(f"Unknown command - {command}")
                 return b"+WRONGCOMMAND\r\n"
 
     def ping(self) -> Coroutine[bytes | None]:

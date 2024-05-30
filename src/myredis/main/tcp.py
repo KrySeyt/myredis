@@ -1,5 +1,6 @@
-import os.path
+import logging
 import socket
+import sys
 from argparse import ArgumentParser
 from pathlib import Path
 
@@ -31,11 +32,13 @@ def connect_to_master(server: TCPServer, master_domain: str, master_port: int) -
     myasync.create_task(server.client_handler(master_conn))
 
 
-def load_snapshot(snapshot_path: str) -> Coroutine[None]:
+def load_snapshot(snapshot_path: Path) -> Coroutine[None]:
     yield from LoadSnapshot(RAMValuesStorage(), DiskSnapshots())(snapshot_path)
 
 
 def main() -> Coroutine[None]:
+    logging.basicConfig(level=logging.INFO, format="%(message)s", stream=sys.stdout)
+
     arg_parser = ArgumentParser(description="MyRedis")
     arg_parser.add_argument("--port", default=6379, type=int)
     arg_parser.add_argument("--replicaof", nargs=2, type=str)
@@ -61,12 +64,12 @@ def main() -> Coroutine[None]:
     if args.replicaof is None:
         snapshot_path = Path(args.dir) / args.dbfilename
 
-        if os.path.isfile(snapshot_path):
-            yield from load_snapshot(str(snapshot_path))
+        if snapshot_path.is_file():
+            yield from load_snapshot(snapshot_path)
 
         myasync.create_task(
             create_snapshot_worker(
-                str(snapshot_path),
+                snapshot_path,
                 args.snapshotsinterval,
                 CreateSnapshot(
                     RAMValuesStorage(),

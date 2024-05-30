@@ -30,7 +30,7 @@ class RAMValuesStorage(ValuesStorage):
         return record
 
     def pop_new(self) -> Coroutine[dict[Key, Record[Any]]]:
-        global new
+        global new  # noqa: PLW0603
         yield None
 
         new_records = new

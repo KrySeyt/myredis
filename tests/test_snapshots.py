@@ -5,7 +5,6 @@ from pathlib import Path
 
 from tests import commands, responses
 from tests.client import create_client
-from tests.server import ServerManager
 
 
 def test_snapshot_loaded(server_manager):

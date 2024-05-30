@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import Generic, TypeVar
 
 from myasync import Coroutine
@@ -13,6 +14,6 @@ class CreateSnapshot(Generic[T]):
         self._values_storage = values_storage
         self._snapshots = snapshots
 
-    def __call__(self, name: str) -> Coroutine[None]:
+    def __call__(self, snapshot_path: Path) -> Coroutine[None]:
         records = yield from self._values_storage.pop_new()
-        yield from self._snapshots.create(name, records)
+        yield from self._snapshots.create(snapshot_path, records)

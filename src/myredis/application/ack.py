@@ -3,13 +3,13 @@ from typing import Generic, TypeVar
 
 from myasync import Coroutine
 
-T_co = TypeVar("T_co")
+T = TypeVar("T")
 
 
-class Ack(Generic[T_co]):
-    def __init__(self, view: Callable[[], T_co]) -> None:
+class Ack(Generic[T]):
+    def __init__(self, view: Callable[[], T]) -> None:
         self._view = view
 
-    def __call__(self) -> Coroutine[T_co]:
+    def __call__(self) -> Coroutine[T]:
         yield None
         return self._view()

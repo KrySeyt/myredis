@@ -1,3 +1,4 @@
+import logging
 import re
 import socket
 from collections.abc import Callable
@@ -9,6 +10,8 @@ from myasync import Coroutine, recv, send
 
 from myredis.adapters.controllers.command_processor import BaseCommandProcessor
 from myredis.external.tcp_replicas import TCPReplica
+
+logger = logging.getLogger(__name__)
 
 COMMANDS_TOKENS = {
     "PING",
@@ -47,9 +50,9 @@ class TCPServer:
                 self._server_config.domain,
                 self._server_config.port,
             ))
-            print("SERVER STARTED")
+            logger.info("SERVER STARTED")
         except OSError:
-            print("PORT ALREADY IN USE")
+            logger.error("PORT ALREADY IN USE")
             exit(1)
 
         while True:
@@ -73,15 +76,13 @@ class TCPServer:
             cmd_delimiter = b"*"
             for cmd in (cmd_delimiter + cmd for cmd in cmd_buffer.split(cmd_delimiter) if cmd):
                 cmd = cmd.replace(placeholder, b"*\r\n")
-                print(cmd)
 
                 if not self.is_command(cmd):
-                    print("Not command")
                     continue
 
                 if self.is_full_command(cmd):
                     parsed_command = self.parse_command(cmd)
-                    print(f"Received command - {parsed_command}")
+                    logger.info(f"Received command - {parsed_command}")
                     response = yield from command_processor.process_command(
                         command=parsed_command,
                         replica=TCPReplica(conn),
@@ -95,7 +96,6 @@ class TCPServer:
                         break
 
                 else:
-                    print("Command is not full")
                     cmd_buffer = bytearray(cmd)
                     break
 

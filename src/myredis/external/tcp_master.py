@@ -14,7 +14,8 @@ class TCPMaster(Master):
         self._master_conn = master_conn
 
     def is_records_valid(self, records: bytes) -> bool:
-        if len(records) > 5 and not records.startswith(b"SYNC%"):
+        records_identifier = b"SYNC%"
+        if len(records) > len(records_identifier) and not records.startswith(records_identifier):
             return False
 
         splitters = records.count(b"\r\n")
@@ -65,7 +66,8 @@ class TCPMaster(Master):
 
             data += data_part
 
-            if len(data) > 5 and not data.startswith(b"SYNC%"):
+            records_identifier = b"SYNC%"
+            if len(data) > len(records_identifier) and not data.startswith(records_identifier):
                 raise MasterSentWrongDataError(data)
 
             if b"\r\n" not in data:

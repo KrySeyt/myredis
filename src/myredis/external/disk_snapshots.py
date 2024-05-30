@@ -1,5 +1,5 @@
 import csv
-import os.path
+from pathlib import Path
 from typing import Any
 
 from myasync import Coroutine
@@ -10,15 +10,15 @@ from myredis.domain.record import Record
 
 
 class DiskSnapshots(Snapshots):
-    def create(self, snapshot_path: str, records: dict[Key, Record[Any]]) -> Coroutine[None]:
+    def create(self, snapshot_path: Path, records: dict[Key, Record[Any]]) -> Coroutine[None]:
         yield None
 
-        file_exists = os.path.exists(snapshot_path)
+        file_existed = snapshot_path.exists()
 
-        with open(snapshot_path, "a") as file:
+        with snapshot_path.open("a") as file:
             writer = csv.DictWriter(file, ["key", "value", "expires"])
 
-            if not file_exists:
+            if not file_existed:
                 writer.writeheader()
 
             for key, record in records.items():
@@ -31,11 +31,11 @@ class DiskSnapshots(Snapshots):
                     "expires": record.expires,
                 })
 
-    def read(self, snapshot_path: str) -> Coroutine[dict[Key, Record[Any]]]:
+    def read(self, snapshot_path: Path) -> Coroutine[dict[Key, Record[Any]]]:
         yield None
 
         records: dict[Key, Record[Any]] = {}
-        with open(snapshot_path) as file:
+        with snapshot_path.open("r") as file:
             reader = csv.DictReader(file)
             for row in reader:
                 expires = row["expires"]
