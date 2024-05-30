@@ -19,7 +19,7 @@ from myredis.domain.key import Key
 from myredis.domain.record import Record
 
 
-class WrongCommand(ValueError):
+class WrongCommandError(ValueError):
     pass
 
 
