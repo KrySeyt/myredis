@@ -37,12 +37,12 @@ class BaseCommandProcessor:
                 response = yield from self.ping()
                 return response
 
-            case ["ECHO", str(value)]:
-                response = yield from self.echo(value)
+            case ["ECHO", str(value) | int(value)]:
+                response = yield from self.echo(str(value))
                 return response
 
             case "SET", str(key), str(value) | int(value), "PX", int(alive):
-                response = yield from self.set(key, value, alive)  # type: ignore[arg-type]
+                response = yield from self.set(key, str(value), alive)  # type: ignore[arg-type]
                 return response
 
             case ["SET", str(key), str(value) | int(value)]:

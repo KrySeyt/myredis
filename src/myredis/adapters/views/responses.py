@@ -17,10 +17,10 @@ def get(record: Record[Any] | None) -> bytes:
     value = record.value
 
     if isinstance(value, str):
-        return str_(value)
+        return bulk_str(value)
 
     if isinstance(value, int):
-        return int_(value)
+        return bulk_str(str(value))
 
     if isinstance(value, Expired):
         return not_found()

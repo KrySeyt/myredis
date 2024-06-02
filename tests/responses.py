@@ -8,13 +8,7 @@ def ok() -> bytes:
 
 
 def get(value: Any) -> bytes:
-    if isinstance(value, str):
-        return f"+{value}\r\n".encode("utf-8")
-
-    if isinstance(value, int):
-        return f":{value}\r\n".encode("utf-8")
-
-    raise ValueError(value)
+    return f"${len(str(value))}\r\n{value}\r\n".encode("utf-8")
 
 
 def not_found() -> bytes:
