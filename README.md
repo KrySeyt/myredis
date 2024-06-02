@@ -42,6 +42,10 @@ python -m src.myredis --port 6379 --dir mydir --dbfilename dbfile
 # Supported commands
 
 ```shell
+redis-cli get foo
+```
+
+```shell
 redis-cli set foo bar
 ```
 
