@@ -78,3 +78,10 @@ redis-cli config get port
 - Integer (server responses only)
 - Null (server responses only)
 
+# Tests
+- Complete [Setup](#Setup)
+
+- Run tests
+```shell
+pytest
+```
