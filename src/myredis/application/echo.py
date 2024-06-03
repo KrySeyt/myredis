@@ -3,13 +3,14 @@ from typing import Generic, TypeVar
 
 from myasync import Coroutine
 
-T = TypeVar("T")
+ValueT = TypeVar("ValueT")
+ViewT = TypeVar("ViewT")
 
 
-class Echo(Generic[T]):
-    def __init__(self, view: Callable[[str], T]) -> None:
+class Echo(Generic[ViewT]):
+    def __init__(self, view: Callable[[ValueT], ViewT]) -> None:
         self._view = view
 
-    def __call__(self, value: str) -> Coroutine[T]:
+    def __call__(self, value: ValueT) -> Coroutine[ViewT]:
         yield None
         return self._view(value)

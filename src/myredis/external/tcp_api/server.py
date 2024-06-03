@@ -126,7 +126,6 @@ class TCPServer:
         return bool(re.match(command_pattern, command))
 
     def parse_command(self, serialized_command: bytes) -> list[Any]:
-        print(serialized_command)
         decoded_command = serialized_command.decode("utf-8")
         commands: list[Any] = decoded_command.strip().split("\r\n")[1:]
         commands = [command for command in commands if command[0] != "$"]

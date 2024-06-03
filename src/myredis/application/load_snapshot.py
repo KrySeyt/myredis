@@ -4,13 +4,13 @@ from typing import Generic, TypeVar
 from myasync import Coroutine
 
 from myredis.application.interfaces.snapshots import Snapshots
-from myredis.application.interfaces.values import ValuesStorage
+from myredis.application.interfaces.values import Values
 
-T = TypeVar("T")
+ViewT = TypeVar("ViewT")
 
 
-class LoadSnapshot(Generic[T]):
-    def __init__(self, values_storage: ValuesStorage, snapshots: Snapshots) -> None:
+class LoadSnapshot(Generic[ViewT]):
+    def __init__(self, values_storage: Values, snapshots: Snapshots) -> None:
         self._values_storage = values_storage
         self._snapshots = snapshots
 

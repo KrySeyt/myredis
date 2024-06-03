@@ -22,10 +22,6 @@ from myredis.domain.record import Record
 logger = logging.getLogger(__name__)
 
 
-class WrongCommandError(ValueError):
-    pass
-
-
 class BaseCommandProcessor:
     def process_command(  # noqa: PLR0911
             self,
@@ -38,11 +34,11 @@ class BaseCommandProcessor:
                 return response
 
             case ["ECHO", str(value) | int(value)]:
-                response = yield from self.echo(str(value))
+                response = yield from self.echo(value)  # type: ignore[arg-type]
                 return response
 
-            case "SET", str(key), str(value) | int(value), "PX", int(alive):
-                response = yield from self.set(key, str(value), alive)  # type: ignore[arg-type]
+            case ["SET", str(key), str(value) | int(value), "PX", int(alive)]:
+                response = yield from self.set(key, str(value), alive)
                 return response
 
             case ["SET", str(key), str(value) | int(value)]:
@@ -78,7 +74,7 @@ class BaseCommandProcessor:
         yield None
         return None
 
-    def echo(self, value: str) -> Coroutine[bytes | None]:
+    def echo(self, value: str | int) -> Coroutine[bytes | None]:
         yield None
         return None
 
@@ -132,15 +128,15 @@ class MasterCommandProcessor(BaseCommandProcessor):
         ping_response = yield from self._ping()
         return ping_response
 
-    def echo(self, value: str) -> Coroutine[bytes | None]:
-        echo_response = yield from self._echo(value)
+    def echo(self, value: str | int) -> Coroutine[bytes | None]:
+        echo_response = yield from self._echo(str(value))
         return echo_response
 
     def set(self, key: Key, value: str | int, alive: float | None = None) -> Coroutine[bytes | None]:
         response = yield from self._set(
             key,
             Record(
-                value,
+                str(value),
                 time.time() + alive / 1000 if alive else None,
             ),
         )

@@ -7,7 +7,7 @@ from myredis.domain.key import Key
 from myredis.domain.record import Record
 
 
-class ValuesStorage(ABC):
+class Values(ABC):
     @abstractmethod
     def set(self, key: Key, record: Record[Any]) -> Coroutine[None]:
         raise NotImplementedError

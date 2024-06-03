@@ -5,15 +5,15 @@ from myasync import Coroutine
 
 from myredis.domain.key import Key
 
-T = TypeVar("T")
+ViewT = TypeVar("ViewT")
 
 
-class GetConfigParam(Generic[T]):
-    def __init__(self, config: dict[Key, str | int], view: Callable[[str, str | None], T]) -> None:
+class GetConfigParam(Generic[ViewT]):
+    def __init__(self, config: dict[Key, str | int], view: Callable[[str, str | None], ViewT]) -> None:
         self._config = config
         self._view = view
 
-    def __call__(self, key: Key) -> Coroutine[T]:
+    def __call__(self, key: Key) -> Coroutine[ViewT]:
         yield None
 
         value = self._config.get(key, None)

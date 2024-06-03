@@ -13,7 +13,7 @@ from myredis.application.load_snapshot import LoadSnapshot
 from myredis.application.ping_master import PingMaster
 from myredis.application.sync_with_master import SyncWithMaster
 from myredis.external.disk_snapshots import DiskSnapshots
-from myredis.external.ram_values_storage import RAMValuesStorage
+from myredis.external.ram_values_storage import RAMValues
 from myredis.external.tcp_api.server import ServerConfig, TCPServer
 from myredis.external.tcp_master import TCPMaster
 from myredis.main.command_processor_factory import DefaultCommandProcessorFactory
@@ -26,14 +26,14 @@ def connect_to_master(server: TCPServer, master_domain: str, master_port: int) -
 
     yield from sync_with_master(
         PingMaster(TCPMaster(master_conn)),
-        SyncWithMaster(RAMValuesStorage(), TCPMaster(master_conn), lambda: None),
+        SyncWithMaster(RAMValues(), TCPMaster(master_conn), lambda: None),
     )
 
     myasync.create_task(server.client_handler(master_conn))
 
 
 def load_snapshot(snapshot_path: Path) -> Coroutine[None]:
-    yield from LoadSnapshot(RAMValuesStorage(), DiskSnapshots())(snapshot_path)
+    yield from LoadSnapshot(RAMValues(), DiskSnapshots())(snapshot_path)
 
 
 def main() -> Coroutine[None]:
@@ -72,7 +72,7 @@ def main() -> Coroutine[None]:
                 snapshot_path,
                 args.snapshotsinterval,
                 CreateSnapshot(
-                    RAMValuesStorage(),
+                    RAMValues(),
                     DiskSnapshots(),
                 ),
             ),

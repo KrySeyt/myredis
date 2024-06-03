@@ -68,7 +68,7 @@ version = "0.0.0"
 authors = [
     { name = "Sequew", email = "kryseyt@gmail.com" },
 ]
-description = "My Redis with MyAsync"
+description = "My Redis powered by MyAsync"
 requires-python = ">=3.11"
 dependencies = [
     "myasync@git+https://github.com/KrySeyt/myasync"
@@ -89,4 +89,4 @@ dev = [
 ]
 
 [project.urls]
-"Homepage" = "https://github.com/KrySeyt/JustChat"
+"Homepage" = "https://github.com/KrySeyt/myredis"

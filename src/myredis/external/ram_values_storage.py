@@ -2,7 +2,7 @@ from typing import Any
 
 from myasync import Coroutine
 
-from myredis.application.interfaces.values import ValuesStorage
+from myredis.application.interfaces.values import Values
 from myredis.domain.key import Key
 from myredis.domain.record import Record
 
@@ -10,7 +10,7 @@ storage: dict[Key, Record[Any]] = {}
 new: dict[Key, Record[Any]] = {}
 
 
-class RAMValuesStorage(ValuesStorage):
+class RAMValues(Values):
     def set(self, key: Key, record: Record[Any]) -> Coroutine[None]:
         yield None
 

@@ -16,7 +16,7 @@ from myredis.application.set import Set
 from myredis.application.sync_replica import SyncReplica
 from myredis.application.wait_replicas import WaitReplicas
 from myredis.domain.key import Key
-from myredis.external.ram_values_storage import RAMValuesStorage
+from myredis.external.ram_values_storage import RAMValues
 from myredis.external.tcp_replicas import TCPReplicasManager
 
 
@@ -30,10 +30,10 @@ class DefaultCommandProcessorFactory(CommandProcessorFactory):
         cmd_processor = MasterCommandProcessor(
             ping=Ping(responses.pong),
             echo=Echo(responses.echo),
-            set_=Set(RAMValuesStorage(), TCPReplicasManager(), responses.ok),
-            get=Get(RAMValuesStorage(), responses.get),
+            set_=Set(RAMValues(), TCPReplicasManager(), responses.ok),
+            get=Get(RAMValues(), responses.get),
             add_replica=AddReplica(TCPReplicasManager(), lambda: None),
-            sync_replica=SyncReplica(RAMValuesStorage(), responses.records),
+            sync_replica=SyncReplica(RAMValues(), responses.records),
             wait=WaitReplicas(TCPReplicasManager(), responses.wait),
             get_config=GetConfigParam(self._config, responses.config_param),
         )

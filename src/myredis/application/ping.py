@@ -3,13 +3,13 @@ from typing import Generic, TypeVar
 
 from myasync import Coroutine
 
-T = TypeVar("T")
+ViewT = TypeVar("ViewT")
 
 
-class Ping(Generic[T]):
-    def __init__(self, view: Callable[[], T]) -> None:
+class Ping(Generic[ViewT]):
+    def __init__(self, view: Callable[[], ViewT]) -> None:
         self._view = view
 
-    def __call__(self) -> Coroutine[T]:
+    def __call__(self) -> Coroutine[ViewT]:
         yield None
         return self._view()
