@@ -15,6 +15,7 @@ from myredis.application.ping import Ping
 from myredis.application.set import Set
 from myredis.application.sync_replica import SyncReplica
 from myredis.application.wait_replicas import WaitReplicas
+from myredis.application.wrong_command import WrongCommand
 from myredis.domain.key import Key
 from myredis.external.ram_values_storage import RAMValues
 from myredis.external.tcp_replicas import TCPReplicasManager
@@ -36,6 +37,7 @@ class DefaultCommandProcessorFactory(CommandProcessorFactory):
             sync_replica=SyncReplica(RAMValues(), responses.records),
             wait=WaitReplicas(TCPReplicasManager(), responses.wait),
             get_config=GetConfigParam(self._config, responses.config_param),
+            wrong_command=WrongCommand(responses.wrong_command),
         )
 
         return cmd_processor

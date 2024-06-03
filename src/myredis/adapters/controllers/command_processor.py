@@ -16,6 +16,7 @@ from myredis.application.ping import Ping
 from myredis.application.set import Set
 from myredis.application.sync_replica import SyncReplica
 from myredis.application.wait_replicas import WaitReplicas
+from myredis.application.wrong_command import WrongCommand
 from myredis.domain.key import Key
 from myredis.domain.record import Milliseconds, Record, Seconds
 
@@ -66,9 +67,9 @@ class BaseCommandProcessor:
                 response = yield from self.config_get(key)
                 return response
 
-            case _:
-                logger.error(f"Unknown command - {command}")
-                return b"+WRONGCOMMAND\r\n"
+            case wrong_command:
+                response = yield from self.wrong_command(wrong_command)
+                return response
 
     def ping(self) -> Coroutine[bytes | None]:
         yield None
@@ -102,6 +103,10 @@ class BaseCommandProcessor:
         yield None
         return None
 
+    def wrong_command(self, command: list[str]) -> Coroutine[bytes | None]:
+        yield None
+        return None
+
 
 class MasterCommandProcessor(BaseCommandProcessor):
     def __init__(
@@ -114,6 +119,7 @@ class MasterCommandProcessor(BaseCommandProcessor):
             sync_replica: SyncReplica[bytes | None],
             wait: WaitReplicas[bytes | None],
             get_config: GetConfigParam[bytes | None],
+            wrong_command: WrongCommand[bytes | None],
     ) -> None:
         self._ping = ping
         self._echo = echo
@@ -123,9 +129,10 @@ class MasterCommandProcessor(BaseCommandProcessor):
         self._sync_replica = sync_replica
         self._wait = wait
         self._get_config = get_config
+        self._wrong_command = wrong_command
 
     def ping(self) -> Coroutine[bytes | None]:
-        ping_response = yield from self._ping()
+        ping_response = yield from self ._ping()
         return ping_response
 
     def echo(self, value: str | int) -> Coroutine[bytes | None]:
@@ -158,6 +165,10 @@ class MasterCommandProcessor(BaseCommandProcessor):
     def config_get(self, key: str) -> Coroutine[bytes | None]:
         config_value = yield from self._get_config(key)
         return config_value
+
+    def wrong_command(self, command: list[str]) -> Coroutine[bytes | None]:
+        response = yield from self._wrong_command(command)
+        return response
 
 
 class ReplicaCommandProcessor(BaseCommandProcessor):

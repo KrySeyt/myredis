@@ -67,3 +67,7 @@ def records(data: dict[str, Record[Any]]) -> bytes:
         serialized_records.append(record_serializer(key, record))
 
     return records_serializer(*serialized_records)
+
+
+def wrong_command() -> bytes:
+    return str_("WRONGCOMMAND")
