@@ -7,7 +7,7 @@ from myasync import Coroutine, Event, create_task, gather, recv, send, sleep
 from myredis.adapters.views import commands
 from myredis.application.interfaces.replicas import Replica, ReplicaSentWrongDataError, ReplicasManager
 from myredis.domain.key import Key
-from myredis.domain.record import Record
+from myredis.domain.record import Milliseconds, Record, Seconds
 
 replicas: list[Replica] = []
 
@@ -52,7 +52,7 @@ class TCPReplicasManager(ReplicasManager):
                 self._responded_replicas_count += 1
                 break
 
-    def wait(self, replicas_count: int, timeout: float) -> Coroutine[int]:
+    def wait(self, replicas_count: int, timeout: Seconds) -> Coroutine[int]:
         is_timeout = Event()
         for repl in replicas:
             create_task(self.wait_replica(repl, is_timeout))
@@ -73,5 +73,9 @@ class TCPReplicasManager(ReplicasManager):
         replicas.append(replica)
 
     def set(self, key: Key, record: Record[Any]) -> Coroutine[None]:
-        cmd = commands.set_(key, record.value, int(record.expires * 1000) if record.expires else None)
+        cmd = commands.set_(
+            key,
+            record.value,
+            Milliseconds(int(record.expires * 1000)) if record.expires else None,
+        )
         yield from gather(*(create_task(repl.send(cmd)) for repl in replicas))

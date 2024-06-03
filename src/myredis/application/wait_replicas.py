@@ -4,6 +4,7 @@ from typing import Generic, TypeVar
 from myasync import Coroutine
 
 from myredis.application.interfaces.replicas import ReplicasManager
+from myredis.domain.record import Seconds
 
 ViewT = TypeVar("ViewT")
 
@@ -13,6 +14,6 @@ class WaitReplicas(Generic[ViewT]):
         self._replicas = replicas
         self._view = view
 
-    def __call__(self, replicas_count: int, timeout: float) -> Coroutine[ViewT]:
+    def __call__(self, replicas_count: int, timeout: Seconds) -> Coroutine[ViewT]:
         responded_replicas_count = yield from self._replicas.wait(replicas_count, timeout)
         return self._view(responded_replicas_count)

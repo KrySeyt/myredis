@@ -1,8 +1,11 @@
 import time
 from dataclasses import dataclass
-from typing import Generic, TypeVar
+from typing import Generic, NewType, TypeVar
 
 T = TypeVar("T")
+
+Milliseconds = NewType("Milliseconds", int)
+Seconds = NewType("Seconds", float)
 
 
 class Expired:
@@ -11,12 +14,8 @@ class Expired:
 
 @dataclass(frozen=True)
 class Record(Generic[T]):
-    """
-    :param expires: expire time in seconds. None is never
-    """
-
     _value: T
-    expires: float | None = None
+    expires: Seconds | None = None
 
     @property
     def value(self) -> T | Expired:

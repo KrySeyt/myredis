@@ -1,14 +1,9 @@
 from typing import Any
 
+from myredis.domain.record import Milliseconds
 
-def set_(key: str, value: Any, expire: int | None = None) -> bytes:
-    """
-    :param key:
-    :param value:
-    :param expire: expire time in milliseconds
-    :return:
-    """
 
+def set_(key: str, value: Any, expire: Milliseconds | None = None) -> bytes:
     if expire is None:
         return (
             f"*3\r\n"
@@ -42,7 +37,7 @@ def ping() -> bytes:
     )
 
 
-def wait(replicas_count: int, expire: int) -> bytes:
+def wait(replicas_count: int, expire: Milliseconds) -> bytes:
     return (
         f"*3\r\n"
         f"$4\r\nWAIT\r\n"

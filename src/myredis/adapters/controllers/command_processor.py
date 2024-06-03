@@ -17,7 +17,7 @@ from myredis.application.set import Set
 from myredis.application.sync_replica import SyncReplica
 from myredis.application.wait_replicas import WaitReplicas
 from myredis.domain.key import Key
-from myredis.domain.record import Record
+from myredis.domain.record import Milliseconds, Record, Seconds
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +38,7 @@ class BaseCommandProcessor:
                 return response
 
             case ["SET", str(key), str(value) | int(value), "PX", int(alive)]:
-                response = yield from self.set(key, str(value), alive)
+                response = yield from self.set(key, str(value), Milliseconds(alive))
                 return response
 
             case ["SET", str(key), str(value) | int(value)]:
@@ -59,7 +59,7 @@ class BaseCommandProcessor:
                 return response
 
             case ["WAIT", int(replicas_count), int(timeout)]:
-                response = yield from self.wait_replicas(replicas_count, timeout)
+                response = yield from self.wait_replicas(replicas_count, Milliseconds(timeout))
                 return response
 
             case ["CONFIG", "GET", str(key)]:
@@ -78,7 +78,7 @@ class BaseCommandProcessor:
         yield None
         return None
 
-    def set(self, key: Key, value: str | int, alive: float | None = None) -> Coroutine[bytes | None]:
+    def set(self, key: Key, value: str | int, alive: Milliseconds | None = None) -> Coroutine[bytes | None]:
         yield None
         return None
 
@@ -94,7 +94,7 @@ class BaseCommandProcessor:
         yield None
         return None
 
-    def wait_replicas(self, replicas_count: int, timeout: int) -> Coroutine[bytes | None]:
+    def wait_replicas(self, replicas_count: int, timeout: Milliseconds) -> Coroutine[bytes | None]:
         yield None
         return None
 
@@ -132,12 +132,12 @@ class MasterCommandProcessor(BaseCommandProcessor):
         echo_response = yield from self._echo(str(value))
         return echo_response
 
-    def set(self, key: Key, value: str | int, alive: float | None = None) -> Coroutine[bytes | None]:
+    def set(self, key: Key, value: str | int, alive: Milliseconds | None = None) -> Coroutine[bytes | None]:
         response = yield from self._set(
             key,
             Record(
                 str(value),
-                time.time() + alive / 1000 if alive else None,
+                Seconds(time.time() + alive / 1000) if alive else None,
             ),
         )
         return response
@@ -151,8 +151,8 @@ class MasterCommandProcessor(BaseCommandProcessor):
         d = yield from self._sync_replica()
         return d
 
-    def wait_replicas(self, replicas_count: int, timeout: int) -> Coroutine[bytes | None]:
-        v = yield from self._wait(replicas_count, timeout / 1000)
+    def wait_replicas(self, replicas_count: int, timeout: Milliseconds) -> Coroutine[bytes | None]:
+        v = yield from self._wait(replicas_count, Seconds(timeout / 1000))
         return v
 
     def config_get(self, key: str) -> Coroutine[bytes | None]:

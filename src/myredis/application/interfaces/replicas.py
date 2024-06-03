@@ -4,7 +4,7 @@ from typing import Any
 from myasync import Coroutine
 
 from myredis.domain.key import Key
-from myredis.domain.record import Record
+from myredis.domain.record import Record, Seconds
 
 
 class ReplicaSentWrongDataError(ValueError):
@@ -23,7 +23,7 @@ class Replica(ABC):
 
 class ReplicasManager(ABC):
     @abstractmethod
-    def wait(self, replicas_count: int, timeout: float) -> Coroutine[int]:
+    def wait(self, replicas_count: int, timeout: Seconds) -> Coroutine[int]:
         raise NotImplementedError
 
     @abstractmethod

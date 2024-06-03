@@ -6,7 +6,7 @@ from myasync import Coroutine
 
 from myredis.application.interfaces.snapshots import Snapshots
 from myredis.domain.key import Key
-from myredis.domain.record import Record
+from myredis.domain.record import Record, Seconds
 
 
 class DiskSnapshots(Snapshots):
@@ -41,7 +41,7 @@ class DiskSnapshots(Snapshots):
                 expires = row["expires"]
                 record = Record(
                     row["value"],
-                    float(expires) if expires else None,
+                    Seconds(float(expires)) if expires else None,
                 )
 
                 if record.is_expired():
