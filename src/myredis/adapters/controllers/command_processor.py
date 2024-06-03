@@ -188,6 +188,10 @@ class ReplicaCommandProcessor(BaseCommandProcessor):
         response = yield from self._ack()
         return response
 
+    def get(self, key: Key) -> Coroutine[bytes | None]:
+        get_response = yield from self._get(key)
+        return get_response
+
 
 class CommandProcessorFactory(ABC):
     @abstractmethod
