@@ -48,6 +48,7 @@ class DefaultCommandProcessorFactory(CommandProcessorFactory):
         cmd_processor = ReplicaCommandProcessor(
             ping=Ping(responses.pong),
             ack=Ack(responses.ack),
+            get=Get(RAMValues(), responses.get),
         )
 
         return cmd_processor

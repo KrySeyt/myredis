@@ -176,9 +176,11 @@ class ReplicaCommandProcessor(BaseCommandProcessor):
             self,
             ping: Ping[bytes | None],
             ack: Ack[bytes | None],
+            get: Get[bytes | None],
     ) -> None:
         self._ping = ping
         self._ack = ack
+        self._get = get
 
     def ping(self) -> Coroutine[bytes | None]:
         response = yield from self._ping()
