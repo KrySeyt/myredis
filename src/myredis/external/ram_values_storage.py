@@ -1,3 +1,4 @@
+from copy import deepcopy
 from typing import Any
 
 from myasync import Coroutine
@@ -22,11 +23,10 @@ class RAMValues(Values):
 
         storage.clear()
         storage.update(records)
-        # raise ValueError(storage)
 
     def get(self, key: Key) -> Coroutine[Record[Any] | None]:
         yield None
-        print(storage)
+
         record = storage.get(key)
         return record
 
@@ -37,3 +37,8 @@ class RAMValues(Values):
         new_records = new
         new = {}
         return new_records
+
+    def get_records(self) -> Coroutine[dict[Key, Record[Any]]]:
+        yield None
+
+        return deepcopy(storage)

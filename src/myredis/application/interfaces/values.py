@@ -23,3 +23,7 @@ class Values(ABC):
     @abstractmethod
     def pop_new(self) -> Coroutine[dict[Key, Record[Any]]]:
         raise NotImplementedError
+
+    @abstractmethod
+    def get_records(self) -> Coroutine[dict[Key, Record[Any]]]:
+        raise NotImplementedError

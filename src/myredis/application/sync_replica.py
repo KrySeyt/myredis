@@ -15,5 +15,5 @@ class SyncReplica(Generic[ViewT]):
         self._view = view
 
     def __call__(self) -> Coroutine[ViewT]:
-        records = yield from self._values_storage.pop_new()
+        records = yield from self._values_storage.get_records()
         return self._view(records)

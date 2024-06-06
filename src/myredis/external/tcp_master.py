@@ -26,7 +26,7 @@ class TCPMaster(Master):
         return True
 
     def get_records_count(self, records: bytes) -> int:
-        return int(records.split(b"\r\n")[0][5:], 2)
+        return int(records.split(b"\r\n")[0][5:].decode("utf-8"))
 
     def parse_value(self, value: bytes) -> Any:
         if value.startswith(b":"):
@@ -74,7 +74,7 @@ class TCPMaster(Master):
             if b"\r\n" not in data:
                 continue
 
-            records_count = int(data.split(b"\r\n")[0][5:], 2)
+            records_count = self.get_records_count(data)
 
             splitters = data.count(b"\r\n")
 
