@@ -177,10 +177,12 @@ class ReplicaCommandProcessor(BaseCommandProcessor):
             ping: Ping[bytes | None],
             ack: Ack[bytes | None],
             get: Get[bytes | None],
+            set_: Set[bytes | None],
     ) -> None:
         self._ping = ping
         self._ack = ack
         self._get = get
+        self._set = set_
 
     def ping(self) -> Coroutine[bytes | None]:
         response = yield from self._ping()
@@ -193,6 +195,16 @@ class ReplicaCommandProcessor(BaseCommandProcessor):
     def get(self, key: Key) -> Coroutine[bytes | None]:
         get_response = yield from self._get(key)
         return get_response
+
+    def set(self, key: Key, value: str | int, alive: Milliseconds | None = None) -> Coroutine[bytes | None]:
+        response = yield from self._set(
+            key,
+            Record(
+                str(value),
+                Seconds(time.time() + alive / 1000) if alive else None,
+            ),
+        )
+        return response
 
 
 class CommandProcessorFactory(ABC):

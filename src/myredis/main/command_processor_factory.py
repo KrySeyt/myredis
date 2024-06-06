@@ -49,6 +49,7 @@ class DefaultCommandProcessorFactory(CommandProcessorFactory):
             ping=Ping(responses.pong),
             ack=Ack(responses.ack),
             get=Get(RAMValues(), responses.get),
+            set_=Set(RAMValues(), TCPReplicasManager(), lambda: None),
         )
 
         return cmd_processor

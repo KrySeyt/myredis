@@ -17,5 +17,6 @@ class SyncWithMaster(Generic[ViewT]):
 
     def __call__(self) -> Coroutine[ViewT]:
         records = yield from self._master_gateway.get_records()
+
         yield from self._values_storage.set_records(records)
         return self._view()

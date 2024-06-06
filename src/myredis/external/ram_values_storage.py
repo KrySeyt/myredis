@@ -22,10 +22,11 @@ class RAMValues(Values):
 
         storage.clear()
         storage.update(records)
+        # raise ValueError(storage)
 
     def get(self, key: Key) -> Coroutine[Record[Any] | None]:
         yield None
-
+        print(storage)
         record = storage.get(key)
         return record
 

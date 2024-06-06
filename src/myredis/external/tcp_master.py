@@ -46,6 +46,7 @@ class TCPMaster(Master):
             key = self.parse_value(next(records_data_iter))
             value = self.parse_value(next(records_data_iter))
             expire = self.parse_value(next(records_data_iter))
+            expire = None if expire == -1 else expire
 
             built_records[key] = Record(value, expire)
 
