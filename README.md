@@ -18,12 +18,12 @@ python -m venv .venv
 
 - Activate venv
 ```shell
-. ./.venv/bin/activate 
+. .venv/bin/activate 
 ```
 
 - Install `myredis`
 ```shell
-pip install myredis-py@git+https://github.com/KrySeyt/myredis-py.git
+pip install myredis@git+https://github.com/KrySeyt/myredis.git
 ```
 
 - Run `myredis` server
