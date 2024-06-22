@@ -11,11 +11,6 @@ Implemented:
 - Get config values
 
 # Setup
-- Copy repo
-```shell
-git clone git@github.com:KrySeyt/myredis.git
-```
-
 - Create venv
 ```shell
 python -m venv .venv 
@@ -28,12 +23,12 @@ python -m venv .venv
 
 - Install `myredis`
 ```shell
-pip install .
+pip install myredis-py@git+https://github.com/KrySeyt/myredis-py.git
 ```
 
 - Run `myredis` server
 ```shell
-python -m src.myredis
+python -m myredis
 ```
 
 # Configuration
