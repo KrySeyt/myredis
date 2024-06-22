@@ -39,7 +39,7 @@ python -m myredis
 - `--replicaof <master-domain:str> <master-port:int>` - Optional. Start server as replica of master
 
 ```shell
-python -m src.myredis --port 6379 --dir mydir --dbfilename dbfile
+python -m myredis --port 6379 --dir mydir --dbfilename dbfile
 ```
 
 # Supported commands
