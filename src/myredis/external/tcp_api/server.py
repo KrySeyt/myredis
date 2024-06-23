@@ -64,7 +64,10 @@ class TCPServer:
         cmd_buffer = bytearray()
         pooling = True
         while pooling:
-            data = yield from recv(conn, 1024)
+            try:
+                data = yield from recv(conn, 1024)
+            except ConnectionResetError:
+                return
 
             if not data:
                 break
@@ -92,8 +95,7 @@ class TCPServer:
                         yield from send(conn, response)
 
                     if parsed_command == ["REPLICA", "SYNC"]:
-                        pooling = False
-                        break
+                        return
 
                 else:
                     cmd_buffer = bytearray(cmd)
